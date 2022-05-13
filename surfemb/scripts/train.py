@@ -68,7 +68,7 @@ def main():
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
     if args.real:
-        assert args.dataset in {'tless', 'tudl', 'ycbv'}
+        assert args.dataset in {'tless', 'tudl', 'ycbv','colibri2'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
