@@ -91,6 +91,8 @@ def main():
         worker_init_fn=worker_init_fn, pin_memory=True,
     )
     loader_train = torch.utils.data.DataLoader(data_train, drop_last=True, **loader_args)
+    # don't shuffle validation set
+    loader_args["shuffle"] = False
     loader_valid = torch.utils.data.DataLoader(data_valid, **loader_args)
 
     # train
