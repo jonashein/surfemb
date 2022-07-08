@@ -27,5 +27,5 @@ itodd.img_folder = 'gray'
 itodd.img_ext = 'tif'
 
 config['colibri2'] = colibri2 = DatasetConfig()
-colibri2.train_folder = 'train_kinect0'
-colibri2.test_folder = 'test_kinect0'
+colibri2.train_folder = 'trainval_all'
+colibri2.test_folder = 'test_all'
