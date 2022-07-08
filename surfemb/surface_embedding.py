@@ -109,15 +109,21 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         return auxs
 
     def configure_optimizers(self):
-        opt = torch.optim.Adam([
-            dict(params=self.cnn.parameters(), lr=self.lr_cnn),
-            dict(params=self.mlps.parameters(), lr=self.lr_mlp),
-        ])
-        sched = dict(
-            scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
-            interval='step'
-        )
-        return [opt], [sched]
+        #opt = torch.optim.Adam([
+        #    dict(params=self.cnn.parameters(), lr=self.lr_cnn),
+        #    dict(params=self.mlps.parameters(), lr=self.lr_mlp),
+        #])
+        #sched = dict(
+        #    scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
+        #    interval='step'
+        #)
+        #return [opt], [sched]
+
+        cnn_opt = torch.optim.Adam(self.cnn.parameters())
+        cnn_sched = torch.optim.lr_scheduler.CyclicLR(cnn_opt, 1e-4, 1e-3)
+        mlp_opt = torch.optim.Adam(self.mlps.parameters())
+        mlp_sched = torch.optim.lr_scheduler.CyclicLR(mlp_opt, 1e-4, 1e-3)
+        return [cnn_opt, mlp_opt], [cnn_sched, mlp_sched]
 
     def step(self, batch, log_prefix):
         img = batch['rgb_crop']  # (B, 3, H, W)
