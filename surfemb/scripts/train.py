@@ -68,7 +68,7 @@ def main():
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
     if args.real:
-        assert args.dataset in {'tless', 'tudl', 'ycbv','colibri2'}
+        assert args.dataset in {'tless', 'tudl', 'ycbv', 'colibri2'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
@@ -104,7 +104,7 @@ def main():
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=0, save_last=True)
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
     trainer = pl.Trainer(
         resume_from_checkpoint=args.ckpt,

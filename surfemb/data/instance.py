@@ -27,7 +27,7 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             self.data_folder = dataset_root / 'train_pbr'
             self.img_folder = 'rgb'
             self.depth_folder = 'depth'
-            self.img_ext = 'jpg'
+            self.img_ext = 'png'
             self.depth_ext = 'png'
         else:
             self.data_folder = dataset_root / (cfg.test_folder if test else cfg.train_folder)
@@ -50,9 +50,9 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             for img_id, poses in scene_gt.items():
                 img_info = scene_gt_info[img_id]
                 K = np.array(scene_camera[img_id]['cam_K']).reshape((3, 3)).copy()
-                if pbr:
-                    warnings.warn('Altering camera matrix, since PBR camera matrix doesnt seem to be correct')
-                    K[:2, 2] -= 0.5
+#                if pbr:
+#                    warnings.warn('Altering camera matrix, since PBR camera matrix doesnt seem to be correct')
+#                    K[:2, 2] -= 0.5
 
                 for pose_idx, pose in enumerate(poses):
                     obj_id = pose['obj_id']

@@ -109,21 +109,16 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         return auxs
 
     def configure_optimizers(self):
-        #opt = torch.optim.Adam([
-        #    dict(params=self.cnn.parameters(), lr=self.lr_cnn),
-        #    dict(params=self.mlps.parameters(), lr=self.lr_mlp),
-        #])
-        #sched = dict(
+        opt = torch.optim.Adam([
+            dict(params=self.cnn.parameters()),
+            dict(params=self.mlps.parameters()),
+        ])
+        sched = dict(
+            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, 1e-5, 2e-4, mode="triangular2", cycle_momentum=False),
         #    scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
-        #    interval='step'
-        #)
-        #return [opt], [sched]
-
-        cnn_opt = torch.optim.Adam(self.cnn.parameters())
-        cnn_sched = torch.optim.lr_scheduler.CyclicLR(cnn_opt, 1e-4, 1e-3)
-        mlp_opt = torch.optim.Adam(self.mlps.parameters())
-        mlp_sched = torch.optim.lr_scheduler.CyclicLR(mlp_opt, 1e-4, 1e-3)
-        return [cnn_opt, mlp_opt], [cnn_sched, mlp_sched]
+            interval='step'
+        )
+        return [opt], [sched]
 
     def step(self, batch, log_prefix):
         img = batch['rgb_crop']  # (B, 3, H, W)
@@ -169,6 +164,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         target = torch.zeros(B, self.n_pos, device=device, dtype=torch.long)
         nce_loss = F.cross_entropy(lgts, target)
 
+        mask_loss *= 10.0
         loss = mask_loss + nce_loss
         self.log(f'{log_prefix}/loss', loss)
         self.log(f'{log_prefix}/mask_loss', mask_loss)

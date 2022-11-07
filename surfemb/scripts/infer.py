@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from .. import utils
 from ..data import detector_crops
+from ..data import instance
 from ..data.config import config
 from ..data.obj import load_objs
 from ..data.renderer import ObjCoordRenderer
@@ -22,6 +23,7 @@ parser.add_argument('--res-crop', type=int, default=224)
 parser.add_argument('--max-poses', type=int, default=10000)
 parser.add_argument('--max-pose-evaluations', type=int, default=1000)
 parser.add_argument('--no-rotation-ensemble', dest='rotation_ensemble', action='store_false')
+parser.add_argument('--detection', action='store_true')
 
 args = parser.parse_args()
 res_crop = args.res_crop
@@ -36,8 +38,11 @@ results_dir.mkdir(exist_ok=True)
 poses_fp = results_dir / f'{model_name}-poses.npy'
 poses_scores_fp = results_dir / f'{model_name}-poses-scores.npy'
 poses_timings_fp = results_dir / f'{model_name}-poses-timings.npy'
-for fp in poses_fp, poses_scores_fp, poses_timings_fp:
-    assert not fp.exists()
+scene_ids_fp = results_dir / f'{dataset}-scene_ids.npy'
+img_ids_fp = results_dir / f'{dataset}-view_ids.npy'
+obj_ids_fp = results_dir / f'{dataset}-obj_ids.npy'
+#for fp in poses_fp, poses_scores_fp, poses_timings_fp:
+#    assert not fp.exists()
 
 # load model
 model = SurfaceEmbeddingModel.load_from_checkpoint(str(model_path)).eval().to(device)  # type: SurfaceEmbeddingModel
@@ -49,16 +54,26 @@ cfg = config[dataset]
 objs, obj_ids = load_objs(root / cfg.model_folder)
 assert len(obj_ids) > 0
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
-data = detector_crops.DetectorCropDataset(
-    dataset_root=root, cfg=cfg, obj_ids=obj_ids,
-    detection_folder=Path(f'data/detection_results/{dataset}'),
-    auxs=model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=True)
-)
+
+if not args.detection:
+    auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=False)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+    data = instance.BopInstanceDataset(**dataset_args, pbr=False, test=True)
+else:
+    data = detector_crops.DetectorCropDataset(
+        dataset_root=root, cfg=cfg, obj_ids=obj_ids,
+        detection_folder=Path(f'data/detection_results/{dataset}'),
+        auxs=model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=True)
+    )
+
 renderer = ObjCoordRenderer(objs, w=res_crop, h=res_crop)
 
 # infer
 all_poses = np.empty((2, len(data), 3, 4))
 all_scores = np.ones(len(data)) * -np.inf
+all_scene_ids = np.empty((len(data)))
+all_img_ids = np.empty((len(data)))
+all_obj_ids = np.empty((len(data)))
 time_forward, time_pnpransac, time_refine = [], [], []
 
 
@@ -66,6 +81,10 @@ def infer(i, d):
     obj_idx = d['obj_idx']
     img = d['rgb_crop']
     K_crop = d['K_crop']
+    all_scene_ids[i] = d['scene_id']
+    all_img_ids[i] = d['img_id']
+    all_obj_ids[i] = d['obj_id']
+    return
 
     with utils.add_timing_to_list(time_forward):
         mask_lgts, query_img = model.infer_cnn(img, obj_idx, rotation_ensemble=args.rotation_ensemble)
@@ -118,6 +137,10 @@ timings = np.stack((
     time_forward + time_pnpransac + time_refine
 ))
 
-np.save(str(poses_fp), all_poses)
-np.save(str(poses_scores_fp), all_scores)
-np.save(str(poses_timings_fp), timings)
+#np.save(str(poses_fp), all_poses)
+#np.save(str(poses_scores_fp), all_scores)
+#np.save(str(poses_timings_fp), timings)
+np.save(str(scene_ids_fp), all_scene_ids)
+np.save(str(img_ids_fp), all_img_ids)
+np.save(str(obj_ids_fp), all_obj_ids)
+
