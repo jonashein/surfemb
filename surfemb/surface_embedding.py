@@ -15,6 +15,7 @@ from .dep.siren import Siren
 from .data.obj import Obj
 from .data.tfms import denormalize
 from . import utils
+from . import pose_est
 
 # could be extended to allow other mlp architectures
 mlp_class_dict = dict(
@@ -190,7 +191,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         emb_img.mul_(0.5).add_(0.5)
         return emb_img
 
-    def log_image_sample(self, batch, i=0):
+    def log_image_sample(self, batch, i=0, infer_pose=False):
         img = batch['rgb_crop'][i]
         obj_idx = batch['obj_idx'][i]
         coord_img = batch['obj_coord'][i]

@@ -57,10 +57,11 @@ model.eval()
 model.freeze()
 
 objs, obj_ids = load_objs(root / cfg.model_folder)
+
 if not args.detection:
     auxs = model.get_infer_auxs(objs=objs, crop_res=crop_res, from_detections=False)
     dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
-    data = instance.BopInstanceDataset(**dataset_args, pbr=False, test=True)
+    data = instance.BopInstanceDataset(**dataset_args, pbr=not args.real, test=args.real)
 else:
     dataset = DetectorCropDataset(
         dataset_root=root, obj_ids=obj_ids, cfg=cfg, detection_folder=Path(f'data/detection_results/{dataset}'),

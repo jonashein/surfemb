@@ -41,8 +41,8 @@ poses_timings_fp = results_dir / f'{model_name}-poses-timings.npy'
 scene_ids_fp = results_dir / f'{dataset}-scene_ids.npy'
 img_ids_fp = results_dir / f'{dataset}-view_ids.npy'
 obj_ids_fp = results_dir / f'{dataset}-obj_ids.npy'
-#for fp in poses_fp, poses_scores_fp, poses_timings_fp:
-#    assert not fp.exists()
+for fp in poses_fp, poses_scores_fp, poses_timings_fp:
+    assert not fp.exists()
 
 # load model
 model = SurfaceEmbeddingModel.load_from_checkpoint(str(model_path)).eval().to(device)  # type: SurfaceEmbeddingModel
@@ -137,10 +137,9 @@ timings = np.stack((
     time_forward + time_pnpransac + time_refine
 ))
 
-#np.save(str(poses_fp), all_poses)
-#np.save(str(poses_scores_fp), all_scores)
-#np.save(str(poses_timings_fp), timings)
+np.save(str(poses_fp), all_poses)
+np.save(str(poses_scores_fp), all_scores)
+np.save(str(poses_timings_fp), timings)
 np.save(str(scene_ids_fp), all_scene_ids)
 np.save(str(img_ids_fp), all_img_ids)
 np.save(str(obj_ids_fp), all_obj_ids)
-
