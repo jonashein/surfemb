@@ -37,6 +37,7 @@ def main():
     parser.add_argument('--min-visib-fract', type=float, default=0.1)
     parser.add_argument('--max-steps', type=int, default=500_000)
     parser.add_argument('--gpus', type=int, nargs='+', default=[0])
+    parser.add_argument('--objs', type=int, nargs='*', default=None)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--ckpt', default=None)
     parser.add_argument('--no-synth', dest='synth', action='store_false')
@@ -49,7 +50,7 @@ def main():
     cfg = config[args.dataset]
 
     # load objs
-    objs, obj_ids = obj.load_objs(root / cfg.model_folder)
+    objs, obj_ids = obj.load_objs(root / cfg.model_folder, args.objs)
     assert len(obj_ids) > 0
 
     # model
@@ -84,6 +85,9 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
+    print(f"Training samples: {len(data_train)}")
+    print(f"Validation samples: {len(data_valid)}")
+
     loader_args = dict(
         batch_size=args.batch_size,
         num_workers=torch.get_num_threads() if args.num_workers is None else args.num_workers,
@@ -100,11 +104,13 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
     run = wandb.init(project='surfemb', dir=log_dir)
     run.name = run.id
+    run.config["samples_train"] = len(data_train)
+    run.config["samples_val"] = len(data_valid)
 
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=0, save_last=True)
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
     trainer = pl.Trainer(
         resume_from_checkpoint=args.ckpt,
