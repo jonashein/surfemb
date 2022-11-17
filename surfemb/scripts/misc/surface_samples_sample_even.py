@@ -14,7 +14,7 @@ n_samples = args.n_samples
 remesh_folder = Path(f'data/remesh_visible/{args.dataset}')
 assert remesh_folder.exists()
 even_samples_folder = Path(f'data/surface_samples/{args.dataset}')
-even_samples_folder.mkdir(exist_ok=True)
+even_samples_folder.mkdir(exist_ok=True, parents=True)
 ms = pymeshlab.MeshSet()
 
 for mesh_fp in tqdm(list(remesh_folder.glob('*.ply'))):

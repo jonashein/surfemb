@@ -4,7 +4,7 @@ dependencies:
   - pip
   - pytorch::pytorch
   - pytorch::torchvision
-  - cudatoolkit=10.2
+  - cudatoolkit=11.6
   - pyg::pytorch-scatter
   - conda-forge::imgaug
   - conda-forge::albumentations

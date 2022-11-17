@@ -68,7 +68,7 @@ def main():
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
     if args.real:
-        assert args.dataset in {'tless', 'tudl', 'ycbv'}
+        assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
@@ -91,6 +91,8 @@ def main():
         worker_init_fn=worker_init_fn, pin_memory=True,
     )
     loader_train = torch.utils.data.DataLoader(data_train, drop_last=True, **loader_args)
+    # don't shuffle validation set
+    loader_args["shuffle"] = False
     loader_valid = torch.utils.data.DataLoader(data_valid, **loader_args)
 
     # train

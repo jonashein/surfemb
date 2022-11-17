@@ -25,3 +25,5 @@ config['itodd'] = itodd = DatasetConfig()
 itodd.depth_ext = 'tif'
 itodd.img_folder = 'gray'
 itodd.img_ext = 'tif'
+
+config['mvpsp'] = mvpsp = DatasetConfig()
