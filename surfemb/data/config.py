@@ -9,6 +9,7 @@ class DatasetConfig:
     depth_folder = 'depth'
     img_ext = 'png'
     depth_ext = 'png'
+    mask_ext = 'png'
 
 
 config = defaultdict(lambda *_: DatasetConfig())

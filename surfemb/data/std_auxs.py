@@ -27,7 +27,7 @@ class MaskLoader(BopInstanceAux):
     def __call__(self, inst: dict, dataset: BopInstanceDataset) -> dict:
         scene_id, img_id, pose_idx = inst['scene_id'], inst['img_id'], inst['pose_idx']
         mask_folder = dataset.data_folder / f'{scene_id:06d}' / self.mask_type
-        mask = cv2.imread(str(mask_folder / f'{img_id:06d}_{pose_idx:06d}.png'), cv2.IMREAD_GRAYSCALE)
+        mask = cv2.imread(str(mask_folder / f'{img_id:06d}_{pose_idx:06d}.{dataset.mask_ext}'), cv2.IMREAD_GRAYSCALE)
         assert mask is not None
         inst[self.mask_type] = mask
         return inst
