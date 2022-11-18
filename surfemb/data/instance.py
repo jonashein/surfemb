@@ -16,7 +16,7 @@ from .config import DatasetConfig
 
 class BopInstanceDataset(torch.utils.data.Dataset):
     def __init__(
-            self, dataset_root: Path, pbr: bool, test: bool, cfg: DatasetConfig,
+            self, dataset_root: Path, synth: bool, pbr: bool, test: bool, cfg: DatasetConfig,
             obj_ids: Sequence[int],
             scene_ids=None, min_visib_fract=0.1, min_px_count_visib=1024,
             auxs: Sequence['BopInstanceAux'] = tuple(), show_progressbar=True,
@@ -28,6 +28,13 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             self.img_folder = 'rgb'
             self.depth_folder = 'depth'
             self.img_ext = 'jpg'
+            self.depth_ext = 'png'
+        elif synth and not pbr:
+            assert not test
+            self.data_folder = dataset_root / 'train_synth'
+            self.img_folder = 'rgb'
+            self.depth_folder = 'depth'
+            self.img_ext = 'png'
             self.depth_ext = 'png'
         else:
             self.data_folder = dataset_root / (cfg.test_folder if test else cfg.train_folder)

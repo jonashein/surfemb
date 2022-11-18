@@ -65,13 +65,17 @@ def main():
     data = utils.EmptyDataset()
     if args.synth:
         data += instance.BopInstanceDataset(
-            dataset_root=root, pbr=True, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            dataset_root=root, synth=True, pbr=True, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
+        )
+        data += instance.BopInstanceDataset(
+            dataset_root=root, synth=True, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
     if args.real:
         assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
-            dataset_root=root, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            dataset_root=root, synth=False, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
         if args.synth:
