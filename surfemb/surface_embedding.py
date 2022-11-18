@@ -23,7 +23,7 @@ mlp_class_dict = dict(
 
 
 class SurfaceEmbeddingModel(pl.LightningModule):
-    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr_cnn=3e-4, lr_mlp=3e-5,
+    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr_cnn=1e-4, lr_mlp=3e-5,
                  mlp_name='siren', mlp_hidden_features=256, mlp_hidden_layers=2,
                  key_noise=1e-3, warmup_steps=2000, separate_decoders=True,
                  **kwargs):
@@ -110,8 +110,8 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.Adam([
-            dict(params=self.cnn.parameters(), lr=1e-4),
-            dict(params=self.mlps.parameters(), lr=3e-5),
+            dict(params=self.cnn.parameters(), lr=self.lr_cnn),
+            dict(params=self.mlps.parameters(), lr=self.lr_mlp),
         ])
         sched = dict(
             scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),

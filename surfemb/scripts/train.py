@@ -42,6 +42,7 @@ def main():
     parser.add_argument('--ckpt', default=None)
     parser.add_argument('--no-synth', dest='synth', action='store_false')
     parser.add_argument('--real', action='store_true')
+    parser.add_argument('--lr-range-test', action='store_true')
 
     parser = SurfaceEmbeddingModel.model_specific_args(parser)
     args = parser.parse_args()
@@ -116,15 +117,44 @@ def main():
 
     model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
-    trainer = pl.Trainer(
-        resume_from_checkpoint=args.ckpt,
-        logger=logger, gpus=args.gpus, max_steps=args.max_steps,
-        callbacks=[
-            pl.callbacks.LearningRateMonitor(),
-            model_ckpt_cb,
-        ],
-        val_check_interval=min(1., n_valid / len(data) * 50)  # spend ~1/50th of the time on validation
-    )
+
+    if args.lr_range_test:
+        print("LR Range Test for MLP:")
+        trainer = pl.Trainer(
+            resume_from_checkpoint=args.ckpt,
+            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
+            callbacks=[
+                pl.callbacks.LearningRateMonitor(),
+                model_ckpt_cb,
+            ],
+            val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
+            auto_lr_find='lr_mlp'
+        )
+        trainer.tune(model, loader_train, loader_valid)
+
+        print("LR Range Test for CNN:")
+        trainer = pl.Trainer(
+            resume_from_checkpoint=args.ckpt,
+            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
+            callbacks=[
+                pl.callbacks.LearningRateMonitor(),
+                model_ckpt_cb,
+            ],
+            val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
+            auto_lr_find='lr_cnn'
+        )
+        trainer.tune(model, loader_train, loader_valid)
+        print("Estimated learning rates of {model.lr_mlp} (MLP) and {model.lr_cnn} (CNN).")
+    else:
+        trainer = pl.Trainer(
+            resume_from_checkpoint=args.ckpt,
+            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
+            callbacks=[
+                pl.callbacks.LearningRateMonitor(),
+                model_ckpt_cb,
+            ],
+            val_check_interval=min(1., n_valid / len(data) * 50)  # spend ~1/50th of the time on validation
+        )
     trainer.fit(model, loader_train, loader_valid)
 
 
