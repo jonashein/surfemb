@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 
 from .. import utils
-from ..data import detector_crops
+from ..data import detector_crops, instance
 from ..data.config import config
 from ..data.obj import load_objs
 from ..data.renderer import ObjCoordRenderer
@@ -19,6 +19,7 @@ parser.add_argument('model_path')
 parser.add_argument('--device', default='cuda:0')
 parser.add_argument('--res-data', type=int, default=256)
 parser.add_argument('--res-crop', type=int, default=224)
+parser.add_argument('--gt-crop', action='store_true')
 parser.add_argument('--max-poses', type=int, default=10000)
 parser.add_argument('--max-pose-evaluations', type=int, default=1000)
 parser.add_argument('--no-rotation-ensemble', dest='rotation_ensemble', action='store_false')
@@ -49,11 +50,16 @@ cfg = config[dataset]
 objs, obj_ids = load_objs(root / cfg.model_folder)
 assert len(obj_ids) > 0
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
-data = detector_crops.DetectorCropDataset(
-    dataset_root=root, cfg=cfg, obj_ids=obj_ids,
-    detection_folder=Path(f'data/detection_results/{dataset}'),
-    auxs=model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=True)
-)
+if args.gt_crop:
+    auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=False)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+    data = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
+else:
+    data = detector_crops.DetectorCropDataset(
+        dataset_root=root, cfg=cfg, obj_ids=obj_ids,
+        detection_folder=Path(f'data/detection_results/{dataset}'),
+        auxs=model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=True)
+    )
 renderer = ObjCoordRenderer(objs, w=res_crop, h=res_crop)
 
 # infer
