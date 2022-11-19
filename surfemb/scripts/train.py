@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--n-valid', type=int, default=200)
     parser.add_argument('--res-data', type=int, default=256)
     parser.add_argument('--res-crop', type=int, default=224)
-    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--num-workers', type=int, default=None)
     parser.add_argument('--min-visib-fract', type=float, default=0.1)
     parser.add_argument('--max-steps', type=int, default=500_000)
@@ -69,16 +69,19 @@ def main():
             dataset_root=root, synth=True, pbr=True, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
+        assert len(data) > 0, "Loaded empty pbr dataset!"
         data += instance.BopInstanceDataset(
             dataset_root=root, synth=True, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
+        assert len(data) > 0, "Loaded empty synthetic dataset!"
     if args.real:
         assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, synth=False, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
+        assert len(data_real) > 0, "Loaded empty real dataset!"
         if args.synth:
             data = utils.balanced_dataset_concat(data, data_real)
         else:
@@ -118,44 +121,27 @@ def main():
     model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
 
-    if args.lr_range_test:
-        print("LR Range Test for MLP:")
-        trainer = pl.Trainer(
-            resume_from_checkpoint=args.ckpt,
-            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
-            callbacks=[
-                pl.callbacks.LearningRateMonitor(),
-                model_ckpt_cb,
-            ],
-            val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
-            auto_lr_find='lr_mlp'
-        )
-        trainer.tune(model, loader_train, loader_valid)
+    trainer = pl.Trainer(
+        resume_from_checkpoint=args.ckpt,
+        logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
+        callbacks=[
+            pl.callbacks.LearningRateMonitor(),
+            model_ckpt_cb,
+        ],
+        val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
+        auto_lr_find=args.lr_range_test
+    )
 
-        print("LR Range Test for CNN:")
-        trainer = pl.Trainer(
-            resume_from_checkpoint=args.ckpt,
-            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
-            callbacks=[
-                pl.callbacks.LearningRateMonitor(),
-                model_ckpt_cb,
-            ],
-            val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
-            auto_lr_find='lr_cnn'
-        )
-        trainer.tune(model, loader_train, loader_valid)
-        print("Estimated learning rates of {model.lr_mlp} (MLP) and {model.lr_cnn} (CNN).")
+    if args.lr_range_test:
+        print("LR Range Test:")
+        #trainer.tune(model, loader_train, loader_valid)
+        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, min_lr=1e-6, max_lr=1e-1, num_training=200)
+        fig = lr_finder.plot(suggest=True)
+        fig.show()
+        model.lr = lr_finder.suggestion()
+        print(f"Estimated learning rate is {model.lr:.6f}.")
     else:
-        trainer = pl.Trainer(
-            resume_from_checkpoint=args.ckpt,
-            logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
-            callbacks=[
-                pl.callbacks.LearningRateMonitor(),
-                model_ckpt_cb,
-            ],
-            val_check_interval=min(1., n_valid / len(data) * 50)  # spend ~1/50th of the time on validation
-        )
-    trainer.fit(model, loader_train, loader_valid)
+        trainer.fit(model, loader_train, loader_valid)
 
 
 if __name__ == '__main__':

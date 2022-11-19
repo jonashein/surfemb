@@ -38,6 +38,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         self.n_objs, self.emb_dim = n_objs, emb_dim
         self.n_pos, self.n_neg = n_pos, n_neg
         self.lr_cnn, self.lr_mlp = lr_cnn, lr_mlp
+        #self.lr = lr_cnn
         self.warmup_steps = warmup_steps
         self.key_noise = key_noise
         self.separate_decoders = separate_decoders
@@ -162,6 +163,8 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         lgts = torch.cat((sim_pos, sim_neg), dim=-1).permute(0, 2, 1)  # (B, 1 + n_neg, n_pos)
         target = torch.zeros(B, self.n_pos, device=device, dtype=torch.long)
         nce_loss = F.cross_entropy(lgts, target)
+
+        mask_loss *= 10.0
 
         loss = mask_loss + nce_loss
         self.log(f'{log_prefix}/loss', loss)

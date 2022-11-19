@@ -29,7 +29,6 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             self.depth_folder = 'depth'
             self.img_ext = 'jpg'
             self.depth_ext = 'png'
-            self.mask_ext = 'jpg'
         elif synth and not pbr:
             assert not test
             self.data_folder = dataset_root / 'train_synth'
@@ -37,14 +36,12 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             self.depth_folder = 'depth'
             self.img_ext = 'png'
             self.depth_ext = 'png'
-            self.mask_ext = 'jpg'
         else:
             self.data_folder = dataset_root / (cfg.test_folder if test else cfg.train_folder)
             self.img_folder = cfg.img_folder
             self.depth_folder = cfg.depth_folder
             self.img_ext = cfg.img_ext
             self.depth_ext = cfg.depth_ext
-            self.mask_ext = cfg.mask_ext
 
         self.auxs = auxs
         obj_idxs = {obj_id: idx for idx, obj_id in enumerate(obj_ids)}
