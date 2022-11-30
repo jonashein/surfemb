@@ -20,6 +20,7 @@ parser.add_argument('--device', default='cuda:0')
 parser.add_argument('--res-data', type=int, default=256)
 parser.add_argument('--res-crop', type=int, default=224)
 parser.add_argument('--gt-crop', action='store_true')
+parser.add_argument('--objs', type=int, nargs='*', default=None)
 parser.add_argument('--max-poses', type=int, default=10000)
 parser.add_argument('--max-pose-evaluations', type=int, default=1000)
 parser.add_argument('--no-rotation-ensemble', dest='rotation_ensemble', action='store_false')
@@ -47,7 +48,7 @@ model.freeze()
 # load data
 root = Path('data/bop') / dataset
 cfg = config[dataset]
-objs, obj_ids = load_objs(root / cfg.model_folder)
+objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
 assert len(obj_ids) > 0
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
 if args.gt_crop:
@@ -113,6 +114,8 @@ def infer(i, d):
 
 
 for i, d in enumerate(tqdm(data, desc='running pose est.', smoothing=0)):
+    if i >= len(data):
+        break
     infer(i, d)
 
 time_forward = np.array(time_forward)
