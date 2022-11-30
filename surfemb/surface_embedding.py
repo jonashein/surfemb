@@ -114,11 +114,11 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             dict(params=self.cnn.parameters(), lr=self.lr_cnn),
             dict(params=self.mlps.parameters(), lr=self.lr_mlp),
         ])
-        sched = dict(
+        warmup = dict(
             scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
             interval='step'
         )
-        return [opt], [sched]
+        return [opt], [warmup]
 
     def step(self, batch, log_prefix):
         img = batch['rgb_crop']  # (B, 3, H, W)

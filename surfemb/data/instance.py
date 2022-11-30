@@ -90,10 +90,18 @@ class BopInstanceDataset(torch.utils.data.Dataset):
         return len(self.instances)
 
     def __getitem__(self, i):
-        instance = self.instances[i].copy()
-        for aux in self.auxs:
-            instance = aux(instance, self)
-        return instance
+        if i < 0 or i > len(self.instances):
+            return None
+        while True:
+            try:
+                instance = self.instances[i].copy()
+                for aux in self.auxs:
+                    instance = aux(instance, self)
+                return instance
+            except Exception as e:
+                print(f"Sample {i} loading failed: {e}\nInstance: {self.instances[i]}")
+                i = (i + 1) % len(self.instances)
+
 
 
 class BopInstanceAux:
