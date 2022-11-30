@@ -19,6 +19,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from ..utils import add_timing_to_list
+from ..data import instance
 from ..data.config import config
 from ..data.obj import load_objs
 from ..data.renderer import ObjCoordRenderer
@@ -29,6 +30,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('model_path')
 parser.add_argument('--device', required=True)
 parser.add_argument('--debug', action='store_true')
+parser.add_argument('--objs', type=int, nargs='*', default=None)
+parser.add_argument('--gt-crop', action='store_true')
 
 args = parser.parse_args()
 model_path = Path(args.model_path)
@@ -54,11 +57,17 @@ model = SurfaceEmbeddingModel.load_from_checkpoint(args.model_path).to(device)
 model.eval()
 model.freeze()
 
-objs, obj_ids = load_objs(root / cfg.model_folder)
-dataset = DetectorCropDataset(
-    dataset_root=root, obj_ids=obj_ids, cfg=cfg, detection_folder=Path(f'data/detection_results/{dataset}'),
-    auxs=model.get_infer_auxs(objs=objs, crop_res=crop_res)
-)
+objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
+if args.gt_crop:
+    auxs = model.get_infer_auxs(objs=objs, crop_res=crop_res, from_detections=False)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+    dataset = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
+else:
+    dataset = DetectorCropDataset(
+        dataset_root=root, obj_ids=obj_ids, cfg=cfg, detection_folder=Path(f'data/detection_results/{dataset}'),
+        auxs=model.get_infer_auxs(objs=objs, crop_res=crop_res)
+    )
+
 assert poses.shape[1] == len(dataset)
 
 crop_renderer = ObjCoordRenderer(objs=objs, w=crop_res, h=crop_res)
@@ -67,6 +76,8 @@ all_depth_timings = [[], []]
 for j in range(2):
     depth_timings = all_depth_timings[j]
     for i, d in enumerate(tqdm(dataset)):
+        if i >= len(dataset):
+            break
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
         t = pose[:3, 3:]
