@@ -1,9 +1,11 @@
 import argparse
 from pathlib import Path
+import json
 
 import numpy as np
 import torch
 from tqdm import tqdm
+from prefetch_generator import BackgroundGenerator
 
 from .. import utils
 from ..data import detector_crops, instance
@@ -24,8 +26,9 @@ parser.add_argument('--objs', type=int, nargs='*', default=None)
 parser.add_argument('--max-poses', type=int, default=10000)
 parser.add_argument('--max-pose-evaluations', type=int, default=1000)
 parser.add_argument('--no-rotation-ensemble', dest='rotation_ensemble', action='store_false')
-
+parser.add_argument('--targets-path', type=str, default=None)
 args = parser.parse_args()
+
 res_crop = args.res_crop
 device = torch.device(args.device)
 model_path = Path(args.model_path)
@@ -45,15 +48,31 @@ for fp in poses_fp, poses_scores_fp, poses_timings_fp:
 model = SurfaceEmbeddingModel.load_from_checkpoint(str(model_path)).eval().to(device)  # type: SurfaceEmbeddingModel
 model.freeze()
 
+if args.targets_path:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    targets_raw = json.load(targets_path.open("r"))
+    targets = {}
+    for t in targets_raw:
+        scene = t["scene_id"]
+        im_id = t["im_id"]
+        obj_id = t["obj_id"]
+        if scene not in targets:
+            targets[scene] = {}
+        if im_id not in targets[scene]:
+            targets[scene][im_id] = []
+        targets[scene][im_id].append(obj_id)
+
 # load data
 root = Path('data/bop') / dataset
 cfg = config[dataset]
 objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
 assert len(obj_ids) > 0
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
+
 if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
     data = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
 else:
     data = detector_crops.DetectorCropDataset(
@@ -113,10 +132,12 @@ def infer(i, d):
         all_poses[j, i, :3, 3:] = t
 
 
-for i, d in enumerate(tqdm(data, desc='running pose est.', smoothing=0)):
-    if i >= len(data):
-        break
-    infer(i, d)
+for i, d in enumerate(tqdm(BackgroundGenerator(data, max_prefetch=2), desc='running pose est.', smoothing=0, total=len(data))):
+    try:
+        #print(f"Sample {i}: Scene id {d['scene_id']}, Image id {d['img_id']}, Obj id {d['obj_id']}, Obj idx {d['obj_idx']}")
+        infer(i, d)
+    except Exception as e:
+        print(f"Caught {type(e).__name__} during inference of sample {i}: \n{e}\nSample {i}: {d}")
 
 time_forward = np.array(time_forward)
 time_pnpransac = np.array(time_pnpransac)

@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import json
 
 import cv2
 import torch.utils.data
@@ -22,6 +23,7 @@ parser.add_argument('--detection', action='store_true')
 parser.add_argument('--i', type=int, default=0)
 parser.add_argument('--device', default='cuda:0')
 parser.add_argument('--objs', type=int, nargs='*', default=None)
+parser.add_argument('--targets-path', type=str, default=None)
 
 args = parser.parse_args()
 data_i = args.i
@@ -32,6 +34,21 @@ model = SurfaceEmbeddingModel.load_from_checkpoint(args.model_path)
 model.eval()
 model.freeze()
 model.to(device)
+
+if args.targets_path:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    targets_raw = json.load(targets_path.open("r"))
+    targets = {}
+    for t in targets_raw:
+        scene = t["scene_id"]
+        im_id = t["im_id"]
+        obj_id = t["obj_id"]
+        if scene not in targets:
+            targets[scene] = {}
+        if im_id not in targets[scene]:
+            targets[scene][im_id] = []
+        targets[scene][im_id].append(obj_id)
 
 dataset = model_path.name.split('-')[0]
 real = args.real
@@ -55,7 +72,7 @@ renderer = ObjCoordRenderer(objs, res_crop)
 assert len(obj_ids) == model.n_objs
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
 auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=detection)
-dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
 if detection:
     assert args.real
     data = detector_crops.DetectorCropDataset(
@@ -209,7 +226,6 @@ while True:
 
 
     def estimate_pose():
-        print()
         with utils.timer('pnp ransac'):
             R, t, scores, mask_scores, coord_scores, dist_2d, size_mask, normals_mask = pose_est.estimate_pose(
                 mask_lgts=mask_lgts, query_img=query_img, down_sample_scale=down_sample_scale,
@@ -236,17 +252,20 @@ while True:
         print(f"Depth error: {d_err:.3f}mm")
         print(f"Rotation error: {np.rad2deg(R_err):.3f}°")
         if obj_id in tip_info:
-            tip_pos_local = tip_info[obj_id]['pos']
+            tip_pos_local = tip_info[obj_id]['pos'].reshape(3, 1)
             tip_pos_gt = R_gt @ tip_pos_local + t_gt
             tip_pos_est = R_est @ tip_pos_local + t_est
-            tip_pos_err = np.linalg.norm(tip_pos_est - tip_pos_gt)
-            tip_dir_local = tip_info[obj_id]['dir']
+            tip_err = tip_pos_est - tip_pos_gt
+            tip_pos_err = np.linalg.norm(tip_err)
+            tip_depth_err = np.abs(tip_pos_est[2] - tip_pos_gt[2]).item()
+            tip_dir_local = tip_info[obj_id]['dir'].reshape(3, 1)
             tip_dir_gt = R_gt @ tip_dir_local
             tip_dir_gt /= np.linalg.norm(tip_dir_gt)
             tip_dir_est = R_est @ tip_dir_local
             tip_dir_est /= np.linalg.norm(tip_dir_est)
-            tip_dir_err = np.arccos(np.clip(np.dot(tip_dir_est, tip_dir_gt), -1.0, 1.0))
+            tip_dir_err = np.arccos(np.clip(np.dot(tip_dir_est.reshape(3), tip_dir_gt.reshape(3)), -1.0, 1.0))
             print(f"Tip position error: {tip_pos_err:.3f}mm")
+            print(f"Tip depth error: {tip_depth_err:.3f}mm")
             print(f"Tip direction error: {np.rad2deg(tip_dir_err):.3f}°")
 
     print('gt:')

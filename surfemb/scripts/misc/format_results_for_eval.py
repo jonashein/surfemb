@@ -11,9 +11,18 @@ parser.add_argument('dataset')
 parser.add_argument('poses')
 parser.add_argument('--dont-use-refinement', dest='use_refinement', action='store_false')
 parser.add_argument('--dont-use-pose-score', dest='use_pose_score', action='store_false')
+parser.add_argument('--objs', type=int, nargs='*', default=None)
+parser.add_argument('--targets-path', type=str, default=None)
 args = parser.parse_args()
 
-detection_path = Path('data/detection_results') / args.dataset
+if args.targets_path is None:
+    detection_path = Path('data/detection_results') / args.dataset
+else:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    detection_path = Path('data/detection_results') / args.dataset / f"{targets_path.stem}"
+
+assert(detection_path.exists())
 poses_fp = Path(args.poses)
 
 name = '-'.join(poses_fp.name.split('-')[:-1])  # dataset, run_id, [optionally "depth"]
@@ -28,7 +37,7 @@ det_view_ids = np.load(str(detection_path / 'view_ids.npy'))
 det_obj_ids = np.load(str(detection_path / 'obj_ids.npy'))
 det_scores = np.load(str(detection_path / 'scores.npy'))
 det_times = np.load(str(detection_path / 'times.npy'))
-assert len(det_scores) == len(pose_scores)
+assert len(det_scores) == len(pose_scores), f"Got different lengths for det_scores ({len(det_scores)}) and pose_scores ({len(pose_scores)})"
 
 scores = pose_scores if args.use_pose_score else det_scores
 poses = poses[1 if args.use_refinement else 0]

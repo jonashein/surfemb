@@ -9,10 +9,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('dataset')
 args = parser.parse_args()
 
-mesh_folder = Path('data/remesh_visible') / args.dataset
-even_samples_folder = Path('data/surface_samples') / args.dataset
+mesh_folder = Path(args.dataset) / 'models_eval'
+even_samples_folder = Path(args.dataset) / 'models_even_surface_samples'
 assert even_samples_folder.exists()
-normals_folder = Path('data/surface_samples_normals') / args.dataset
+normals_folder = Path(args.dataset) / 'models_surface_samples_normals'
 normals_folder.mkdir(exist_ok=True, parents=True)
 
 for mesh_fp in tqdm(list(mesh_folder.glob('*.ply'))):

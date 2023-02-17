@@ -18,10 +18,13 @@ class BopInstanceDataset(torch.utils.data.Dataset):
     def __init__(
             self, dataset_root: Path, synth: bool, pbr: bool, test: bool, cfg: DatasetConfig,
             obj_ids: Sequence[int],
-            scene_ids=None, min_visib_fract=0.1, min_px_count_visib=1024,
+            scene_ids=None, targets=None, min_visib_fract=0.1, min_px_count_visib=1024,
             auxs: Sequence['BopInstanceAux'] = tuple(), show_progressbar=True,
     ):
         self.pbr, self.test, self.cfg = pbr, test, cfg
+        assert scene_ids is None or targets is None, "Can't have both yet."
+        assert targets is None or test, "Targets can only be used for test split"
+
         if pbr:
             assert not test
             self.data_folder = dataset_root / 'train_pbr'
@@ -47,7 +50,9 @@ class BopInstanceDataset(torch.utils.data.Dataset):
         obj_idxs = {obj_id: idx for idx, obj_id in enumerate(obj_ids)}
         self.instances = []
         if scene_ids is None:
-            scene_ids = sorted([int(p.name) for p in self.data_folder.glob('*')])
+            scene_ids = sorted([int(p.name) for p in self.data_folder.glob('*') if not p.is_file()])
+        if targets is not None:
+            scene_ids = [s for s in scene_ids if s in targets]
         for scene_id in tqdm(scene_ids, 'loading crop info') if show_progressbar else scene_ids:
             scene_folder = self.data_folder / f'{scene_id:06d}'
             scene_gt = json.load((scene_folder / 'scene_gt.json').open())
@@ -55,6 +60,8 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             scene_camera = json.load((scene_folder / 'scene_camera.json').open())
 
             for img_id, poses in scene_gt.items():
+                if targets is not None and int(img_id) not in targets[scene_id]:
+                    continue
                 img_info = scene_gt_info[img_id]
                 K = np.array(scene_camera[img_id]['cam_K']).reshape((3, 3)).copy()
                 if pbr:
@@ -63,6 +70,8 @@ class BopInstanceDataset(torch.utils.data.Dataset):
 
                 for pose_idx, pose in enumerate(poses):
                     obj_id = pose['obj_id']
+                    if targets is not None and obj_id not in targets[scene_id][int(img_id)]:
+                        continue
                     if obj_ids is not None and obj_id not in obj_ids:
                         continue
                     pose_info = img_info[pose_idx]
@@ -90,17 +99,10 @@ class BopInstanceDataset(torch.utils.data.Dataset):
         return len(self.instances)
 
     def __getitem__(self, i):
-        if i < 0 or i > len(self.instances):
-            return None
-        while True:
-            try:
-                instance = self.instances[i].copy()
-                for aux in self.auxs:
-                    instance = aux(instance, self)
-                return instance
-            except Exception as e:
-                print(f"Sample {i} loading failed: {e}\nInstance: {self.instances[i]}")
-                i = (i + 1) % len(self.instances)
+        instance = self.instances[i].copy()
+        for aux in self.auxs:
+            instance = aux(instance, self)
+        return instance
 
 
 

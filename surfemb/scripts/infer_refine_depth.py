@@ -32,12 +32,28 @@ parser.add_argument('--device', required=True)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--objs', type=int, nargs='*', default=None)
 parser.add_argument('--gt-crop', action='store_true')
+parser.add_argument('--targets-path', type=str, default=None)
 
 args = parser.parse_args()
 model_path = Path(args.model_path)
 name = model_path.name.split('.')[0]
 dataset = name.split('-')[0]
 device = torch.device(args.device)
+
+if args.targets_path:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    targets_raw = json.load(targets_path.open("r"))
+    targets = {}
+    for t in targets_raw:
+        scene = t["scene_id"]
+        im_id = t["im_id"]
+        obj_id = t["obj_id"]
+        if scene not in targets:
+            targets[scene] = {}
+        if im_id not in targets[scene]:
+            targets[scene][im_id] = []
+        targets[scene][im_id].append(obj_id)
 
 cfg = config[dataset]
 crop_res = 224
@@ -60,7 +76,7 @@ model.freeze()
 objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
 if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=crop_res, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
     dataset = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
 else:
     dataset = DetectorCropDataset(
