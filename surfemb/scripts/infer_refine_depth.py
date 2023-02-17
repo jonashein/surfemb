@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 import torch
 from tqdm import tqdm
+from prefetch_generator import BackgroundGenerator
 import matplotlib.pyplot as plt
 
 from ..utils import add_timing_to_list
@@ -91,9 +92,7 @@ n_failed = 0
 all_depth_timings = [[], []]
 for j in range(2):
     depth_timings = all_depth_timings[j]
-    for i, d in enumerate(tqdm(dataset)):
-        if i >= len(dataset):
-            break
+    for i, d in enumerate(tqdm(BackgroundGenerator(dataset, max_prefetch=2), desc='running depth refinement', smoothing=0, total=len(dataset))):
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
         t = pose[:3, 3:]
