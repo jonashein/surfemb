@@ -93,6 +93,9 @@ all_depth_timings = [[], []]
 for j in range(2):
     depth_timings = all_depth_timings[j]
     for i, d in enumerate(tqdm(BackgroundGenerator(dataset, max_prefetch=2), desc='running depth refinement', smoothing=0, total=len(dataset))):
+        if d['mask_samples'] is None:
+            n_failed += 1
+            continue
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
         t = pose[:3, 3:]
