@@ -95,6 +95,8 @@ for j in range(2):
     for i, d in enumerate(tqdm(BackgroundGenerator(dataset, max_prefetch=2), desc='running depth refinement', smoothing=0, total=len(dataset))):
         if d['mask_samples'] is None:
             n_failed += 1
+            depth_timings.append(0)
+            print(f"Failed to sample from mask. n_failed={n_failed}")
             continue
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
