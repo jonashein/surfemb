@@ -71,6 +71,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             # by cropping. 'definition_aux' registers 'AABB_crop' such that the "expensive" image augmentation is only
             # performed where the crop is going to be taken from.
             data.std_auxs.TransformsAux(key='rgb', crop_key='AABB_crop', tfms=A.Compose([
+                A.MotionBlur(blur_limit=11),
                 A.GaussianBlur(blur_limit=(1, 3)),
                 A.ISONoise(),
                 A.GaussNoise(),
@@ -84,7 +85,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             data.pose_auxs.SurfaceSampleAux(objs, self.n_neg),
             data.pose_auxs.MaskSamplesAux(self.n_pos),
             data.std_auxs.TransformsAux(tfms=A.Compose([
-                A.CoarseDropout(max_height=16, max_width=16, min_width=8, min_height=8),
+                A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, p=0.75),
                 A.ColorJitter(hue=0.1),
             ])),
             data.std_auxs.NormalizeAux(),
