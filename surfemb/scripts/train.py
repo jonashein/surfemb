@@ -122,7 +122,6 @@ def main():
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
 
     trainer = pl.Trainer(
-        resume_from_checkpoint=args.ckpt,
         logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
         callbacks=[
             pl.callbacks.LearningRateMonitor(),
@@ -141,7 +140,7 @@ def main():
         model.lr = lr_finder.suggestion()
         print(f"Estimated learning rate is {model.lr:.6f}.")
     else:
-        trainer.fit(model, loader_train, loader_valid)
+        trainer.fit(model, loader_train, loader_valid, ckpt_path=args.ckpt)
 
 
 if __name__ == '__main__':
