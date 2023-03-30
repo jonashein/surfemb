@@ -71,7 +71,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             # by cropping. 'definition_aux' registers 'AABB_crop' such that the "expensive" image augmentation is only
             # performed where the crop is going to be taken from.
             data.std_auxs.TransformsAux(key='rgb', crop_key='AABB_crop', tfms=A.Compose([
-                A.MotionBlur(blur_limit=11),
+                A.MotionBlur(blur_limit=(3, 11)),
                 A.GaussianBlur(blur_limit=(1, 3)),
                 A.ISONoise(),
                 A.GaussNoise(),
@@ -82,12 +82,15 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             ])),
             random_crop_aux.apply_aux,
             data.pose_auxs.ObjCoordAux(objs, crop_res, replace_mask=True),
+            data.std_auxs.TransformsAux(
+                key='rgb_crop', mask='mask_visib_crop',
+                tfms=A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, p=0.75)
+            ),
+            data.std_auxs.TransformsAux(
+                tfms=A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3, p=0.75)
+            ),
             data.pose_auxs.SurfaceSampleAux(objs, self.n_neg),
             data.pose_auxs.MaskSamplesAux(self.n_pos),
-            data.std_auxs.TransformsAux(tfms=A.Compose([
-                A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, p=0.75),
-                A.ColorJitter(hue=0.1),
-            ])),
             data.std_auxs.NormalizeAux(),
             data.std_auxs.KeyFilterAux({'rgb_crop', 'obj_coord', 'obj_idx', 'surface_samples', 'mask_samples'})
         )

@@ -124,8 +124,9 @@ class RandomRotatedMaskCropApply(BopInstanceAux):
 
 
 class TransformsAux(BopInstanceAux):
-    def __init__(self, tfms, key='rgb_crop', crop_key=None):
+    def __init__(self, tfms, key='rgb_crop', crop_key=None, mask=None):
         self.key = key
+        self.mask = mask
         self.tfms = tfms
         self.crop_key = crop_key
 
@@ -135,8 +136,16 @@ class TransformsAux(BopInstanceAux):
             img_slice = slice(top, bottom), slice(left, right)
         else:
             img_slice = slice(None)
-        img = inst[self.key]
-        img[img_slice] = self.tfms(image=img[img_slice])['image']
+        #img = inst[self.key]
+        params = {
+            'image': inst[self.key][img_slice]
+        }
+        if self.mask is not None:
+            params['mask'] = inst[self.mask][img_slice]
+        outputs = self.tfms(**params)
+        inst[self.key][img_slice] = outputs['image']
+        if self.mask is not None:
+            inst[self.mask][img_slice] = outputs['mask']
         return inst
 
 
