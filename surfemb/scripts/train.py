@@ -118,8 +118,8 @@ def main():
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
-    model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename=f'{args.dataset}-{run.id}', save_top_k=1, save_last=True)
+    model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}-{"{epoch}-last"}'
 
     trainer = pl.Trainer(
         logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,

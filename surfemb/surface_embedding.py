@@ -87,7 +87,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
                 tfms=A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, p=0.75)
             ),
             data.std_auxs.TransformsAux(
-                tfms=A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3, p=0.75)
+                tfms=A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.15)
             ),
             data.pose_auxs.SurfaceSampleAux(objs, self.n_neg),
             data.pose_auxs.MaskSamplesAux(self.n_pos),
@@ -198,6 +198,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
     def log_image_sample(self, batch, i=0):
         img = batch['rgb_crop'][i]
+        mask = batch['mask_visib_crop'][i]
         obj_idx = batch['obj_idx'][i]
         coord_img = batch['obj_coord'][i]
         coord_mask = coord_img[..., 3] != 0
@@ -210,7 +211,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         key_img = self.get_emb_vis(key_img, mask=coord_mask, demean=True)
 
         log_img = torch.cat((
-            denormalize(img).permute(1, 2, 0), mask_est, query_img, key_img,
+            denormalize(img).permute(1, 2, 0), mask, mask_est, query_img, key_img,
         ), dim=1).cpu().numpy()
         self.trainer.logger.experiment.log(dict(
             embeddings=wandb.Image(log_img),

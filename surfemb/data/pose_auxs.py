@@ -65,9 +65,7 @@ class MaskSamplesAux(BopInstanceAux):
 
     def __call__(self, inst: dict, _):
         mask_arg = np.argwhere(inst[self.mask_key])  # (N, 2)
-        if len(mask_arg) >= self.n_samples:
-            idxs = np.random.choice(np.arange(len(mask_arg)), self.n_samples, replace=self.n_samples > len(mask_arg))
-            inst['mask_samples'] = mask_arg[idxs]  # (n_samples, 2)
-        else:
-            inst['mask_samples'] = None
+        assert len(mask_arg) > 0, f"Empty mask: \n{inst}\n"
+        idxs = np.random.choice(np.arange(len(mask_arg)), self.n_samples, replace=self.n_samples > len(mask_arg))
+        inst['mask_samples'] = mask_arg[idxs]  # (n_samples, 2)
         return inst
