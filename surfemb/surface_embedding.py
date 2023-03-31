@@ -81,10 +81,10 @@ class SurfaceEmbeddingModel(pl.LightningModule):
                 A.GaussianBlur(blur_limit=(1, 3)),
             ])),
             random_crop_aux.apply_aux,
-            data.pose_auxs.ObjCoordAux(objs, crop_res, replace_mask=True),
+            data.pose_auxs.ObjCoordAux(objs, crop_res, mask_key=None),
             data.std_auxs.TransformsAux(
                 key='rgb_crop', mask='mask_visib_crop',
-                tfms=A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, p=0.75)
+                tfms=A.CoarseDropout(max_height=64, max_width=64, min_width=8, min_height=8, mask_fill_value=0, p=0.75)
             ),
             data.std_auxs.TransformsAux(
                 tfms=A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.15)
@@ -92,7 +92,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             data.pose_auxs.SurfaceSampleAux(objs, self.n_neg),
             data.pose_auxs.MaskSamplesAux(self.n_pos),
             data.std_auxs.NormalizeAux(),
-            data.std_auxs.KeyFilterAux({'rgb_crop', 'obj_coord', 'obj_idx', 'surface_samples', 'mask_samples'})
+            data.std_auxs.KeyFilterAux({'rgb_crop', 'mask_visib_crop', 'obj_coord', 'obj_idx', 'surface_samples', 'mask_samples'})
         )
 
     def get_infer_auxs(self, objs: Sequence[Obj], crop_res: int, from_detections=True):
@@ -198,7 +198,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
     def log_image_sample(self, batch, i=0):
         img = batch['rgb_crop'][i]
-        mask = batch['mask_visib_crop'][i]
+        gt_mask_visib_crop = torch.tile(batch['mask_visib_crop'][i][..., None], (1, 1, 3)) / 255.
         obj_idx = batch['obj_idx'][i]
         coord_img = batch['obj_coord'][i]
         coord_mask = coord_img[..., 3] != 0
@@ -211,7 +211,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         key_img = self.get_emb_vis(key_img, mask=coord_mask, demean=True)
 
         log_img = torch.cat((
-            denormalize(img).permute(1, 2, 0), mask, mask_est, query_img, key_img,
+            denormalize(img).permute(1, 2, 0), gt_mask_visib_crop, mask_est, query_img, key_img,
         ), dim=1).cpu().numpy()
         self.trainer.logger.experiment.log(dict(
             embeddings=wandb.Image(log_img),
