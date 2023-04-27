@@ -168,7 +168,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         target = torch.zeros(B, self.n_pos, device=device, dtype=torch.long)
         nce_loss = F.cross_entropy(lgts, target)
 
-        #mask_loss *= 10.0
+        mask_loss *= 10.0
 
         loss = mask_loss + nce_loss
         self.log(f'{log_prefix}/loss', loss)
