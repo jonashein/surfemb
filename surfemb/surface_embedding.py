@@ -129,12 +129,13 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         coord_img = batch['obj_coord']  # (B, H, W, 4) [-1, 1]
         obj_idx = batch['obj_idx']  # (B,)
         coords_neg = batch['surface_samples']  # (B, n_neg, 3) [-1, 1]
+        mask = batch['mask_visib_crop'] > 0
+        #mask = coord_img[..., 3] == 1.  # (B, H, W)
         mask_samples = batch['mask_samples']  # (B, n_pos, 2)
 
         device = img.device
         B, _, H, W = img.shape
         assert coords_neg.shape[1] == self.n_neg
-        mask = coord_img[..., 3] == 1.  # (B, H, W)
         y, x = mask_samples.permute(2, 0, 1)  # 2 x (B, n_pos)
 
         if self.separate_decoders:
@@ -167,8 +168,6 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         lgts = torch.cat((sim_pos, sim_neg), dim=-1).permute(0, 2, 1)  # (B, 1 + n_neg, n_pos)
         target = torch.zeros(B, self.n_pos, device=device, dtype=torch.long)
         nce_loss = F.cross_entropy(lgts, target)
-
-        mask_loss *= 10.0
 
         loss = mask_loss + nce_loss
         self.log(f'{log_prefix}/loss', loss)
