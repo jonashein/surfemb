@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 import torch
 from tqdm import tqdm
+from prefetch_generator import BackgroundGenerator
 import matplotlib.pyplot as plt
 
 from ..utils import add_timing_to_list
@@ -30,13 +31,30 @@ parser = argparse.ArgumentParser()
 parser.add_argument('model_path')
 parser.add_argument('--device', required=True)
 parser.add_argument('--debug', action='store_true')
-parser.add_argument('--detection', action='store_true')
+parser.add_argument('--objs', type=int, nargs='*', default=None)
+parser.add_argument('--gt-crop', action='store_true')
+parser.add_argument('--targets-path', type=str, default=None)
 
 args = parser.parse_args()
 model_path = Path(args.model_path)
 name = model_path.name.split('.')[0]
 dataset = name.split('-')[0]
 device = torch.device(args.device)
+
+if args.targets_path:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    targets_raw = json.load(targets_path.open("r"))
+    targets = {}
+    for t in targets_raw:
+        scene = t["scene_id"]
+        im_id = t["im_id"]
+        obj_id = t["obj_id"]
+        if scene not in targets:
+            targets[scene] = {}
+        if im_id not in targets[scene]:
+            targets[scene][im_id] = []
+        targets[scene][im_id].append(obj_id)
 
 cfg = config[dataset]
 crop_res = 224
@@ -56,17 +74,17 @@ model = SurfaceEmbeddingModel.load_from_checkpoint(args.model_path).to(device)
 model.eval()
 model.freeze()
 
-objs, obj_ids = load_objs(root / cfg.model_folder)
-
-if not args.detection:
+objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
+if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=crop_res, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
-    data = instance.BopInstanceDataset(**dataset_args, pbr=not args.real, test=args.real)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
+    dataset = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
 else:
     dataset = DetectorCropDataset(
         dataset_root=root, obj_ids=obj_ids, cfg=cfg, detection_folder=Path(f'data/detection_results/{dataset}'),
         auxs=model.get_infer_auxs(objs=objs, crop_res=crop_res)
     )
+
 assert poses.shape[1] == len(dataset)
 
 crop_renderer = ObjCoordRenderer(objs=objs, w=crop_res, h=crop_res)
@@ -74,7 +92,12 @@ n_failed = 0
 all_depth_timings = [[], []]
 for j in range(2):
     depth_timings = all_depth_timings[j]
-    for i, d in enumerate(tqdm(dataset)):
+    for i, d in enumerate(tqdm(BackgroundGenerator(dataset, max_prefetch=2), desc='running depth refinement', smoothing=0, total=len(dataset))):
+        if d['mask_samples'] is None:
+            n_failed += 1
+            depth_timings.append(0)
+            print(f"Failed to sample from mask. n_failed={n_failed}")
+            continue
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
         t = pose[:3, 3:]

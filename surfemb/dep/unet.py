@@ -4,6 +4,7 @@
 import torch
 from torch import nn
 import torchvision
+from torchvision.models import ResNet18_Weights
 
 
 def convrelu(in_channels, out_channels, kernel, padding):
@@ -18,7 +19,7 @@ class ResNetUNet(nn.Module):
         super().__init__()
 
         #  shared encoder
-        self.base_model = torchvision.models.resnet18(pretrained=True)
+        self.base_model = torchvision.models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         self.base_layers = list(self.base_model.children())
 
         self.layer0 = nn.Sequential(*self.base_layers[:3])  # size=(N, 64, x.H/2, x.W/2)

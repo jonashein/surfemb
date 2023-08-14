@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import json
 
 import cv2
 import torch.utils.data
@@ -21,6 +22,8 @@ parser.add_argument('--real', action='store_true')
 parser.add_argument('--detection', action='store_true')
 parser.add_argument('--i', type=int, default=0)
 parser.add_argument('--device', default='cuda:0')
+parser.add_argument('--objs', type=int, nargs='*', default=None)
+parser.add_argument('--targets-path', type=str, default=None)
 
 args = parser.parse_args()
 data_i = args.i
@@ -32,6 +35,21 @@ model.eval()
 model.freeze()
 model.to(device)
 
+if args.targets_path:
+    targets_path = Path(args.targets_path)
+    assert targets_path.is_file()
+    targets_raw = json.load(targets_path.open("r"))
+    targets = {}
+    for t in targets_raw:
+        scene = t["scene_id"]
+        im_id = t["im_id"]
+        obj_id = t["obj_id"]
+        if scene not in targets:
+            targets[scene] = {}
+        if im_id not in targets[scene]:
+            targets[scene][im_id] = []
+        targets[scene][im_id].append(obj_id)
+
 dataset = model_path.name.split('-')[0]
 real = args.real
 detection = args.detection
@@ -39,25 +57,35 @@ root = Path('data/bop') / dataset
 cfg = config[dataset]
 res_crop = 224
 
-objs, obj_ids = obj.load_objs(root / cfg.model_folder)
+objs, obj_ids = obj.load_objs(root / cfg.model_folder, args.objs)
+tip_info = {
+    1: {
+        'pos': np.array([0.0, 0.0, -237.7204]),
+        'dir': np.array([0.0, 0.0, -1.0])
+    },
+    2: {
+        'pos': np.array([0.0, 0.0, -181.7988]),
+        'dir': np.array([0.0, 0.0, -1.0])
+    }
+}
 renderer = ObjCoordRenderer(objs, res_crop)
 assert len(obj_ids) == model.n_objs
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)
 auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=detection)
-dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg)
+dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
 if detection:
     assert args.real
     data = detector_crops.DetectorCropDataset(
         **dataset_args, detection_folder=Path(f'detection_results/{dataset}')
     )
 else:
-    data = instance.BopInstanceDataset(**dataset_args, pbr=not args.real, test=args.real)
+    data = instance.BopInstanceDataset(**dataset_args, synth=not args.real, pbr=not args.real, test=args.real)
 
 # initialize opencv windows
 cols = 4
 window_names = 'img', 'mask_est', 'queries', 'keys', \
                'dist', 'xy', 'xz', 'yz', \
-               'pose', 'mask_score', 'coord_score', 'query_norm'
+               'pose', 'gt_pose', 'mask_score', 'coord_score', 'query_norm'
 for j, name in enumerate(window_names):
     row = j // cols
     col = j % cols
@@ -169,7 +197,7 @@ while True:
         cv2.setMouseCallback(name, mouse_cb)
 
 
-    def debug_pose_hypothesis(R, t, obj_pts=None, img_pts=None):
+    def debug_pose_hypothesis(R, t, window_name="pose", obj_pts=None, img_pts=None):
         global uv_pts_3d, current_pose
         current_pose = R, t
         render = renderer.render(obj_idx, K_crop, R, t)
@@ -184,7 +212,7 @@ while True:
             uv_pts_3d = obj_pts
             mouse_cb(None, *last_mouse_pos)
 
-        cv2.imshow('pose', pose_img)
+        cv2.imshow(window_name, pose_img)
 
         poses = np.eye(4)
         poses[:3, :3] = R
@@ -198,7 +226,6 @@ while True:
 
 
     def estimate_pose():
-        print()
         with utils.timer('pnp ransac'):
             R, t, scores, mask_scores, coord_scores, dist_2d, size_mask, normals_mask = pose_est.estimate_pose(
                 mask_lgts=mask_lgts, query_img=query_img, down_sample_scale=down_sample_scale,
@@ -216,6 +243,48 @@ while True:
             debug_pose_hypothesis(R_, t_)
             return R_, t_
 
+    def compute_metrics(obj_id, R_est, t_est, R_gt, t_gt):
+        t_err = np.linalg.norm(t_est - t_gt)
+        d_err = np.abs(t_est[2] - t_gt[2]).item()
+        trace = np.trace(R_gt @ R_est.T)
+        R_err = np.arccos(np.clip((trace - 1) / 2, -1, 1))
+        print(f"Translation error: {t_err:.3f}mm")
+        print(f"Depth error: {d_err:.3f}mm")
+        print(f"Rotation error: {np.rad2deg(R_err):.3f}°")
+        if obj_id in tip_info:
+            tip_pos_local = tip_info[obj_id]['pos'].reshape(3, 1)
+            tip_pos_gt = R_gt @ tip_pos_local + t_gt
+            tip_pos_est = R_est @ tip_pos_local + t_est
+            tip_err = tip_pos_est - tip_pos_gt
+            tip_pos_err = np.linalg.norm(tip_err)
+            tip_depth_err = np.abs(tip_pos_est[2] - tip_pos_gt[2]).item()
+            tip_dir_local = tip_info[obj_id]['dir'].reshape(3, 1)
+            tip_dir_gt = R_gt @ tip_dir_local
+            tip_dir_gt /= np.linalg.norm(tip_dir_gt)
+            tip_dir_est = R_est @ tip_dir_local
+            tip_dir_est /= np.linalg.norm(tip_dir_est)
+            tip_dir_err = np.arccos(np.clip(np.dot(tip_dir_est.reshape(3), tip_dir_gt.reshape(3)), -1.0, 1.0))
+            print(f"Tip position error: {tip_pos_err:.3f}mm")
+            print(f"Tip depth error: {tip_depth_err:.3f}mm")
+            print(f"Tip direction error: {np.rad2deg(tip_dir_err):.3f}°")
+
+    print('gt:')
+    debug_pose_hypothesis(inst['cam_R_obj'], inst['cam_t_obj'], "gt_pose")
+    print('pose est:')
+    R, t = estimate_pose()
+    compute_metrics(obj_ids[obj_idx], R, t, inst['cam_R_obj'], inst['cam_t_obj'])
+    print('refine:')
+    if current_pose is not None:
+        with utils.timer('refinement'):
+            R, t, score_r = pose_refine.refine_pose(
+                R=current_pose[0], t=current_pose[1], query_img=query_img, keys_verts=keys_verts,
+                obj_idx=obj_idx, obj_=obj_, K_crop=K_crop, model=model, renderer=renderer,
+            )
+            trace = np.trace(R @ current_pose[0].T)
+            angle = np.arccos(np.clip((trace - 1) / 2, -1, 1))
+            print(f'refinement angle diff: {np.rad2deg(angle):.1f} deg')
+        compute_metrics(obj_ids[obj_idx], R, t, inst['cam_R_obj'], inst['cam_t_obj'])
+        debug_pose_hypothesis(R, t)
 
     while True:
         print()
@@ -233,10 +302,11 @@ while True:
             break
         elif key == ord('e'):
             print('pose est:')
-            estimate_pose()
+            R, t = estimate_pose()
+            compute_metrics(obj_ids[obj_idx], R, t, inst['cam_R_obj'], inst['cam_t_obj'])
         elif key == ord('g'):
             print('gt:')
-            debug_pose_hypothesis(inst['cam_R_obj'], inst['cam_t_obj'])
+            debug_pose_hypothesis(inst['cam_R_obj'], inst['cam_t_obj'], "gt_pose")
         elif key == ord('r'):
             print('refine:')
             if current_pose is not None:
@@ -248,6 +318,7 @@ while True:
                     trace = np.trace(R @ current_pose[0].T)
                     angle = np.arccos(np.clip((trace - 1) / 2, -1, 1))
                     print(f'refinement angle diff: {np.rad2deg(angle):.1f} deg')
+                compute_metrics(obj_ids[obj_idx], R, t, inst['cam_R_obj'], inst['cam_t_obj'])
                 debug_pose_hypothesis(R, t)
 
         mouse_cb(None, *last_mouse_pos)

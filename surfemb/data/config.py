@@ -9,6 +9,7 @@ class DatasetConfig:
     depth_folder = 'depth'
     img_ext = 'png'
     depth_ext = 'png'
+    mask_ext = 'png'
 
 
 config = defaultdict(lambda *_: DatasetConfig())
@@ -26,6 +27,4 @@ itodd.depth_ext = 'tif'
 itodd.img_folder = 'gray'
 itodd.img_ext = 'tif'
 
-config['colibri2'] = colibri2 = DatasetConfig()
-colibri2.train_folder = 'trainval_all'
-colibri2.test_folder = 'test_all'
+config['mvpsp'] = mvpsp = DatasetConfig()

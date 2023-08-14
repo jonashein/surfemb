@@ -37,10 +37,12 @@ def main():
     parser.add_argument('--min-visib-fract', type=float, default=0.1)
     parser.add_argument('--max-steps', type=int, default=500_000)
     parser.add_argument('--gpus', type=int, nargs='+', default=[0])
+    parser.add_argument('--objs', type=int, nargs='*', default=None)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--ckpt', default=None)
     parser.add_argument('--no-synth', dest='synth', action='store_false')
     parser.add_argument('--real', action='store_true')
+    parser.add_argument('--lr-range-test', action='store_true')
 
     parser = SurfaceEmbeddingModel.model_specific_args(parser)
     args = parser.parse_args()
@@ -49,7 +51,7 @@ def main():
     cfg = config[args.dataset]
 
     # load objs
-    objs, obj_ids = obj.load_objs(root / cfg.model_folder)
+    objs, obj_ids = obj.load_objs(root / cfg.model_folder, args.objs)
     assert len(obj_ids) > 0
 
     # model
@@ -64,15 +66,22 @@ def main():
     data = utils.EmptyDataset()
     if args.synth:
         data += instance.BopInstanceDataset(
-            dataset_root=root, pbr=True, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            dataset_root=root, synth=True, pbr=True, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
+        assert len(data) > 0, "Loaded empty pbr dataset!"
+        data += instance.BopInstanceDataset(
+            dataset_root=root, synth=True, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
+        )
+        assert len(data) > 0, "Loaded empty synthetic dataset!"
     if args.real:
-        assert args.dataset in {'tless', 'tudl', 'ycbv', 'colibri2'}
+        assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
-            dataset_root=root, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
+            dataset_root=root, synth=False, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
             min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
         )
+        assert len(data_real) > 0, "Loaded empty real dataset!"
         if args.synth:
             data = utils.balanced_dataset_concat(data, data_real)
         else:
@@ -83,6 +92,9 @@ def main():
         data, (len(data) - n_valid, n_valid),
         generator=torch.Generator().manual_seed(0),
     )
+
+    print(f"Training samples: {len(data_train)}")
+    print(f"Validation samples: {len(data_valid)}")
 
     loader_args = dict(
         batch_size=args.batch_size,
@@ -100,22 +112,36 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
     run = wandb.init(project='surfemb', dir=log_dir)
     run.name = run.id
+    run.config["samples_train"] = len(data_train)
+    run.config["samples_val"] = len(data_valid)
 
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
     model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
+
     trainer = pl.Trainer(
         resume_from_checkpoint=args.ckpt,
-        logger=logger, gpus=args.gpus, max_steps=args.max_steps,
+        logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
         callbacks=[
             pl.callbacks.LearningRateMonitor(),
             model_ckpt_cb,
         ],
-        val_check_interval=min(1., n_valid / len(data) * 50)  # spend ~1/50th of the time on validation
+        val_check_interval=min(1., n_valid / len(data) * 50),  # spend ~1/50th of the time on validation
+        auto_lr_find=args.lr_range_test
     )
-    trainer.fit(model, loader_train, loader_valid)
+
+    if args.lr_range_test:
+        print("LR Range Test:")
+        #trainer.tune(model, loader_train, loader_valid)
+        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, min_lr=1e-6, max_lr=1e-1, num_training=200)
+        fig = lr_finder.plot(suggest=True)
+        fig.show()
+        model.lr = lr_finder.suggestion()
+        print(f"Estimated learning rate is {model.lr:.6f}.")
+    else:
+        trainer.fit(model, loader_train, loader_valid)
 
 
 if __name__ == '__main__':

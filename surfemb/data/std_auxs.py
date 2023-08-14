@@ -19,6 +19,17 @@ class RgbLoader(BopInstanceAux):
         inst['rgb'] = rgb.copy() if self.copy else rgb
         return inst
 
+class DepthLoader(BopInstanceAux):
+    def __init__(self, copy=False):
+        self.copy = copy
+
+    def __call__(self, inst: dict, dataset: BopInstanceDataset) -> dict:
+        scene_id, img_id = inst['scene_id'], inst['img_id']
+        fp = dataset.data_folder / f'{scene_id:06d}/{dataset.depth_folder}/{img_id:06d}.{dataset.depth_ext}'
+        depth = cv2.imread(str(fp), cv2.IMREAD_ANYDEPTH)
+        assert depth is not None
+        inst['depth'] = depth.copy() if self.copy else depth
+        return inst
 
 class MaskLoader(BopInstanceAux):
     def __init__(self, mask_type='mask_visib'):
