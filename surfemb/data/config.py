@@ -30,4 +30,4 @@ itodd.img_ext = 'tif'
 config['mvpsp'] = mvpsp = DatasetConfig()
 
 config['syntheticClarius'] = syntheticClarius = DatasetConfig()
-itodd.img_ext = 'jpg'
+syntheticClarius.img_ext = 'jpg'

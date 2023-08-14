@@ -47,8 +47,9 @@ def main():
     parser = SurfaceEmbeddingModel.model_specific_args(parser)
     args = parser.parse_args()
     debug = args.debug
-    root = Path('data/bop') / args.dataset
+
     cfg = config[args.dataset]
+    root = Path('data/bop') / args.dataset
 
     # load objs
     objs, obj_ids = obj.load_objs(root / cfg.model_folder, args.objs)

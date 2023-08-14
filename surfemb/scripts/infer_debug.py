@@ -35,6 +35,12 @@ model.eval()
 model.freeze()
 model.to(device)
 
+dataset = model_path.name.split('-')[0]
+real = args.real
+detection = args.detection
+root = Path('data/bop') / dataset
+cfg = config[dataset]
+
 if args.targets_path:
     targets_path = Path(args.targets_path)
     assert targets_path.is_file()
@@ -49,12 +55,11 @@ if args.targets_path:
         if im_id not in targets[scene]:
             targets[scene][im_id] = []
         targets[scene][im_id].append(obj_id)
+    cfg.test_folder = targets_path.parent.stem
 
-dataset = model_path.name.split('-')[0]
-real = args.real
-detection = args.detection
-root = Path('data/bop') / dataset
-cfg = config[dataset]
+if dataset == "mvpsp" and cfg.test_folder == "test_orx":
+    cfg.img_ext = "jpg"
+
 res_crop = 224
 
 objs, obj_ids = obj.load_objs(root / cfg.model_folder, args.objs)

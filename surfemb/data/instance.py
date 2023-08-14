@@ -23,7 +23,6 @@ class BopInstanceDataset(torch.utils.data.Dataset):
     ):
         self.pbr, self.test, self.cfg = pbr, test, cfg
         assert scene_ids is None or targets is None, "Can't have both yet."
-        assert targets is None or test, "Targets can only be used for test split"
 
         if pbr:
             assert not test
