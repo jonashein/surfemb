@@ -43,6 +43,7 @@ def main():
     parser.add_argument('--no-synth', dest='synth', action='store_false')
     parser.add_argument('--real', action='store_true')
     parser.add_argument('--lr-range-test', action='store_true')
+    parser.add_argument('--train_fraction', type=float, default=1.0)
 
     parser = SurfaceEmbeddingModel.model_specific_args(parser)
     args = parser.parse_args()
@@ -79,7 +80,7 @@ def main():
         assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, synth=False, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
-            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None,
+            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None, train_fraction=args.train_fraction
         )
         assert len(data_real) > 0, "Loaded empty real dataset!"
         if args.synth:
