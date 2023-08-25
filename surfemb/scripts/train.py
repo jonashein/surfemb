@@ -120,8 +120,8 @@ def main():
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', save_top_k=1, save_last=True)
-    model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}'
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename='{args.dataset}-{run.id}-{epoch}-{val_loss:.2f}', save_top_k=1, save_last=True)
+    model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}-last'
 
     trainer = pl.Trainer(
         resume_from_checkpoint=args.ckpt,
@@ -137,9 +137,10 @@ def main():
     if args.lr_range_test:
         print("LR Range Test:")
         #trainer.tune(model, loader_train, loader_valid)
-        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, min_lr=1e-6, max_lr=1e-1, num_training=200)
+        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, num_training=200)
         fig = lr_finder.plot(suggest=True)
         fig.show()
+        fig.savefig(f'data/logs/{args.dataset}-{run.id}-lr-range-test.png')
         model.lr = lr_finder.suggestion()
         print(f"Estimated learning rate is {model.lr:.6f}.")
     else:
