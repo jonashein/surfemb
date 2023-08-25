@@ -24,7 +24,7 @@ mlp_class_dict = dict(
 
 
 class SurfaceEmbeddingModel(pl.LightningModule):
-    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr_cnn=1e-4, lr_mlp=3e-5,
+    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr=3e-5,
                  mlp_name='siren', mlp_hidden_features=256, mlp_hidden_layers=2,
                  key_noise=1e-3, warmup_steps=2000, separate_decoders=True,
                  **kwargs):
@@ -38,7 +38,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
         self.n_objs, self.emb_dim = n_objs, emb_dim
         self.n_pos, self.n_neg = n_pos, n_neg
-        self.lr_cnn, self.lr_mlp = lr_cnn, lr_mlp
+        self.lr = lr
         self.warmup_steps = warmup_steps
         self.key_noise = key_noise
         self.separate_decoders = separate_decoders
@@ -111,11 +111,11 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.Adam([
-            dict(params=self.cnn.parameters(), lr=self.lr_cnn),
-            dict(params=self.mlps.parameters(), lr=self.lr_mlp),
+            dict(params=self.cnn.parameters(), lr=self.lr),
+            dict(params=self.mlps.parameters(), lr=self.lr),
         ])
         warmup = dict(
-            scheduler=torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
+            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, self.lr, self.lr * 10.0), # torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
             interval='step'
         )
         return [opt], [warmup]

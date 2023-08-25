@@ -137,9 +137,8 @@ def main():
     if args.lr_range_test:
         print("LR Range Test:")
         #trainer.tune(model, loader_train, loader_valid)
-        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, num_training=200)
+        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, num_training=1000)
         fig = lr_finder.plot(suggest=True)
-        fig.show()
         fig.savefig(f'data/logs/{args.dataset}-{run.id}-lr-range-test.png')
         model.lr = lr_finder.suggestion()
         print(f"Estimated learning rate is {model.lr:.6f}.")
