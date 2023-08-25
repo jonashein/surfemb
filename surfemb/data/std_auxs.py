@@ -14,7 +14,7 @@ class RgbLoader(BopInstanceAux):
     def __call__(self, inst: dict, dataset: BopInstanceDataset) -> dict:
         scene_id, img_id = inst['scene_id'], inst['img_id']
         fp = dataset.data_folder / f'{scene_id:06d}/{dataset.img_folder}/{img_id:06d}.{dataset.img_ext}'
-        assert exists(fp), f"FileNotFound: {fp}"
+        assert fp.exists(), f"FileNotFound: {fp}"
         rgb = cv2.imread(str(fp), cv2.IMREAD_COLOR)[..., ::-1]
         assert rgb is not None
         inst['rgb'] = rgb.copy() if self.copy else rgb
@@ -27,7 +27,7 @@ class DepthLoader(BopInstanceAux):
     def __call__(self, inst: dict, dataset: BopInstanceDataset) -> dict:
         scene_id, img_id = inst['scene_id'], inst['img_id']
         fp = dataset.data_folder / f'{scene_id:06d}/{dataset.depth_folder}/{img_id:06d}.{dataset.depth_ext}'
-        assert exists(fp), f"FileNotFound: {fp}"
+        assert fp.exists(), f"FileNotFound: {fp}"
         depth = cv2.imread(str(fp), cv2.IMREAD_ANYDEPTH)
         assert depth is not None
         inst['depth'] = depth.copy() if self.copy else depth
@@ -41,7 +41,7 @@ class MaskLoader(BopInstanceAux):
         scene_id, img_id, pose_idx = inst['scene_id'], inst['img_id'], inst['pose_idx']
         mask_folder = dataset.data_folder / f'{scene_id:06d}' / self.mask_type
         fp = mask_folder / f'{img_id:06d}_{pose_idx:06d}.png'
-        assert exists(fp), f"FileNotFound: {fp}"
+        assert fp.exists(), f"FileNotFound: {fp}"
         mask = cv2.imread(str(fp), cv2.IMREAD_GRAYSCALE)
         assert mask is not None
         inst[self.mask_type] = mask
