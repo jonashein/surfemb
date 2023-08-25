@@ -58,6 +58,7 @@ def main():
     # model
     if args.ckpt:
         assert args.dataset == Path(args.ckpt).name.split('-')[0]
+        assert Path(args.ckpt).exists(), f"FileNotFound: {args.ckpt}"
         model = SurfaceEmbeddingModel.load_from_checkpoint(args.ckpt)
     else:
         model = SurfaceEmbeddingModel(n_objs=len(obj_ids), **vars(args))

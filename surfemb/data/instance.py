@@ -58,6 +58,9 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             scene_ids = [s for s in scene_ids if s in targets]
         for scene_id in tqdm(scene_ids, 'loading crop info') if show_progressbar else scene_ids:
             scene_folder = self.data_folder / f'{scene_id:06d}'
+            assert (scene_folder / 'scene_gt.json').exists(), f"FileNotFound: {(scene_folder / 'scene_gt.json')}"
+            assert (scene_folder / 'scene_gt_info.json').exists(), f"FileNotFound: {(scene_folder / 'scene_gt_info.json')}"
+            assert (scene_folder / 'scene_camera.json').exists(), f"FileNotFound: {(scene_folder / 'scene_camera.json')}"
             scene_gt = json.load((scene_folder / 'scene_gt.json').open())
             scene_gt_info = json.load((scene_folder / 'scene_gt_info.json').open())
             scene_camera = json.load((scene_folder / 'scene_camera.json').open())
