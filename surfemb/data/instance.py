@@ -33,7 +33,7 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             self.data_folder = dataset_root / 'train_pbr'
             self.img_folder = 'rgb'
             self.depth_folder = 'depth'
-            self.img_ext = 'png'
+            self.img_ext = 'jpg'
             self.depth_ext = 'png'
         elif synth and not pbr:
             assert not test
