@@ -120,8 +120,9 @@ def main():
     logger = pl.loggers.WandbLogger(experiment=run)
     logger.log_hyperparams(args)
 
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename='{args.dataset}-{run.id}-{epoch}-{val_loss:.2f}', save_top_k=1, save_last=True)
-    model_ckpt_cb.CHECKPOINT_NAME_LAST = f'{args.dataset}-{run.id}-last'
+    ckpt_filename = f"{args.dataset}-{run.id}-" + "{epoch}-{val_loss:.2f}"
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename=ckpt_filename, save_top_k=1, save_last=True)
+    model_ckpt_cb.CHECKPOINT_NAME_LAST = f"{args.dataset}-{run.id}-last"
 
     trainer = pl.Trainer(
         resume_from_checkpoint=args.ckpt,
