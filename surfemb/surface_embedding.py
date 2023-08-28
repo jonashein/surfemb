@@ -115,7 +115,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             dict(params=self.mlps.parameters(), lr=self.lr),
         ])
         warmup = dict(
-            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, self.lr, self.lr * 10.0), # torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
+            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, self.lr, self.lr * 10.0, cycle_momentum=False), # torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(1., i / self.warmup_steps)),
             interval='step'
         )
         return [opt], [warmup]
