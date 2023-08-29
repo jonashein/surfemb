@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--objs', type=int, nargs='*', default=None)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--ckpt', default=None)
+    parser.add_argument('--resume', type=bool, default=False)
     parser.add_argument('--no-synth', dest='synth', action='store_false')
     parser.add_argument('--real', action='store_true')
     parser.add_argument('--lr-range-test', action='store_true')
@@ -125,7 +126,7 @@ def main():
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f"{args.dataset}-{run.id}-last"
 
     trainer = pl.Trainer(
-        resume_from_checkpoint=args.ckpt,
+        resume_from_checkpoint=args.ckpt if args.resume else None,
         logger=logger, accelerator='gpu', devices=args.gpus, max_steps=args.max_steps,
         callbacks=[
             pl.callbacks.LearningRateMonitor(),
