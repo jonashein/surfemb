@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--res-data', type=int, default=256)
     parser.add_argument('--res-crop', type=int, default=224)
     parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--emb-dim', type=int, default=12)
     parser.add_argument('--num-workers', type=int, default=None)
     parser.add_argument('--min-visib-fract', type=float, default=0.1)
     parser.add_argument('--max-steps', type=int, default=500_000)
