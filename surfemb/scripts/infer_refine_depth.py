@@ -29,7 +29,7 @@ from ..surface_embedding import SurfaceEmbeddingModel
 
 parser = argparse.ArgumentParser()
 parser.add_argument('model_path')
-parser.add_argument('--device', required=True)
+parser.add_argument('--device', default='cuda:0')
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--objs', type=int, nargs='*', default=None)
 parser.add_argument('--gt-crop', action='store_true')
