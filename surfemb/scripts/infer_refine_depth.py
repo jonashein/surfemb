@@ -47,9 +47,9 @@ if args.targets_path:
     targets_raw = json.load(targets_path.open("r"))
     targets = {}
     for t in targets_raw:
-        scene = t["scene_id"]
-        im_id = t["im_id"]
-        obj_id = t["obj_id"]
+        scene = int(t["scene_id"])
+        im_id = int(t["im_id"])
+        obj_id = int(t["obj_id"])
         if scene not in targets:
             targets[scene] = {}
         if im_id not in targets[scene]:

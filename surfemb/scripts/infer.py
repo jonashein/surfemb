@@ -57,9 +57,9 @@ if args.targets_path:
     targets_raw = json.load(targets_path.open("r"))
     targets = {}
     for t in targets_raw:
-        scene = t["scene_id"]
-        im_id = t["im_id"]
-        obj_id = t["obj_id"]
+        scene = int(t["scene_id"])
+        im_id = int(t["im_id"])
+        obj_id = int(t["obj_id"])
         if scene not in targets:
             targets[scene] = {}
         if im_id not in targets[scene]:
@@ -102,7 +102,6 @@ def infer(i, d):
     all_scene_ids[i] = d['scene_id']
     all_img_ids[i] = d['img_id']
     all_obj_ids[i] = d['obj_id']
-    return
 
     with utils.add_timing_to_list(time_forward):
         mask_lgts, query_img = model.infer_cnn(img, obj_idx, rotation_ensemble=args.rotation_ensemble)
