@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 from tqdm import tqdm
 import torch.utils.data
-import random
 
 from .config import DatasetConfig
 
