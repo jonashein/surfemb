@@ -81,19 +81,46 @@ def main():
         assert args.dataset in {'tless', 'tudl', 'ycbv', 'mvpsp'}
         data_real = instance.BopInstanceDataset(
             dataset_root=root, synth=False, pbr=False, test=False, cfg=cfg, obj_ids=obj_ids, auxs=auxs,
-            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None, train_fraction=args.train_fraction
+            min_visib_fract=args.min_visib_fract, scene_ids=[1] if debug else None
         )
         assert len(data_real) > 0, "Loaded empty real dataset!"
-        if args.synth:
-            data = utils.balanced_dataset_concat(data, data_real)
-        else:
-            data = data_real
 
-    n_valid = args.n_valid
-    data_train, data_valid = torch.utils.data.random_split(
-        data, (len(data) - n_valid, n_valid),
-        generator=torch.Generator().manual_seed(0),
-    )
+    if args.synth and args.real:
+        # validation samples must be split from training samples before merging datasets!
+        n_half_valid = int(n_valid / 2)
+        data_train_real, data_valid_real = torch.utils.data.random_split(
+            data_real, (len(data_real) - n_half_valid, n_half_valid),
+            generator=torch.Generator().manual_seed(0),
+        )
+        data_train_synth, data_valid_synth = torch.utils.data.random_split(
+            data, (len(data) - n_half_valid, n_half_valid),
+            generator=torch.Generator().manual_seed(0),
+        )
+        # keep only a fraction of _real_ training samples, keep all synthetic samples!
+        if 0.0 < args.train_fraction < 1.0:
+            keep_count = int(args.train_fraction * len(data_train_real))
+            print(f"Keeping only a fraction of {args.train_fraction}, i.e. {keep_count} of {len(data_train_real)} real samples.")
+            random.shuffle(data_train_real.instances)
+            data_train_real.instances = data_train_real.instances[:keep_count]
+        data_train = utils.balanced_dataset_concat(data_train_real, data_train_synth)
+        data_valid = data_valid_real + data_valid_synth
+        data = data_train + data_valid
+    elif args.real:
+        data = data_real
+        data_train, data_valid = torch.utils.data.random_split(
+            data, (len(data) - n_valid, n_valid),
+            generator=torch.Generator().manual_seed(0),
+        )
+        if 0.0 < args.train_fraction < 1.0:
+            keep_count = int(args.train_fraction * len(data_train))
+            print(f"Keeping only a fraction of {args.train_fraction}, i.e. {keep_count} of {len(data_train)} real samples.")
+            random.shuffle(data_train.instances)
+            data_train.instances = data_train.instances[:keep_count]
+    elif args.synth:
+        data_train, data_valid = torch.utils.data.random_split(
+            data, (len(data) - n_valid, n_valid),
+            generator=torch.Generator().manual_seed(0),
+        )
 
     print(f"Training samples: {len(data_train)}")
     print(f"Validation samples: {len(data_valid)}")

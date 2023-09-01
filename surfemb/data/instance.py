@@ -21,10 +21,8 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             obj_ids: Sequence[int],
             scene_ids=None, targets=None, min_visib_fract=0.1, min_px_count_visib=1024,
             auxs: Sequence['BopInstanceAux'] = tuple(), show_progressbar=True,
-            train_fraction=1.0,
     ):
         self.pbr, self.test, self.cfg = pbr, test, cfg
-        assert 0.0 < train_fraction <= 1.0, f"Invalid training fraction {train_fraction}"
         assert scene_ids is None or targets is None, "Can't have both yet."
         assert targets is None or test, "Targets can only be used for test split"
 
@@ -97,12 +95,6 @@ class BopInstanceDataset(torch.utils.data.Dataset):
                         bbox_visib=bbox_visib, bbox_obj=bbox_obj, cam_R_obj=cam_R_obj, cam_t_obj=cam_t_obj,
                         obj_idx=obj_idxs[obj_id],
                     ))
-
-        if train_fraction < 1.0:
-            keep_count = int(train_fraction * len(self.instances))
-            print(f"Keeping only a fraction of {train_fraction}, i.e. {keep_count} of {len(self.instances)} samples.")
-            random.shuffle(self.instances)
-            self.instances = self.instances[:keep_count]
 
         for aux in self.auxs:
             aux.init(self)
