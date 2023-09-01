@@ -102,8 +102,8 @@ def main():
         if 0.0 < args.train_fraction < 1.0:
             keep_count = int(args.train_fraction * len(data_train_real))
             print(f"Keeping only a fraction of {args.train_fraction}, i.e. {keep_count} of {len(data_train_real)} real samples.")
-            random.shuffle(data_train_real.instances)
-            data_train_real.instances = data_train_real.instances[:keep_count]
+            random.shuffle(data_train_real.indices)
+            data_train_real.indices = data_train_real.indices[:keep_count]
         data_train = utils.balanced_dataset_concat(data_train_real, data_train_synth)
         data_valid = data_valid_real + data_valid_synth
         data = data_train + data_valid
@@ -116,8 +116,8 @@ def main():
         if 0.0 < args.train_fraction < 1.0:
             keep_count = int(args.train_fraction * len(data_train))
             print(f"Keeping only a fraction of {args.train_fraction}, i.e. {keep_count} of {len(data_train)} real samples.")
-            random.shuffle(data_train.instances)
-            data_train.instances = data_train.instances[:keep_count]
+            random.shuffle(data_train.indices)
+            data_train.indices = data_train.indices[:keep_count]
     elif args.synth:
         data_train, data_valid = torch.utils.data.random_split(
             data, (len(data) - n_valid, n_valid),
