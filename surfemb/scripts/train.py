@@ -85,6 +85,7 @@ def main():
         )
         assert len(data_real) > 0, "Loaded empty real dataset!"
 
+    n_valid = args.n_valid
     if args.synth and args.real:
         # validation samples must be split from training samples before merging datasets!
         n_half_valid = int(n_valid / 2)
