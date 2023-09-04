@@ -55,6 +55,9 @@ if args.targets_path:
         if im_id not in targets[scene]:
             targets[scene][im_id] = []
         targets[scene][im_id].append(obj_id)
+    cfg.test_folder = targets_path.parent.stem
+    if cfg.test_folder == "test_orx":
+        cfg.img_ext = "jpg"
 
 cfg = config[dataset]
 crop_res = 224
