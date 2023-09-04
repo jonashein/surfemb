@@ -77,7 +77,7 @@ model.freeze()
 objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
 if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=crop_res, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets, min_visib_fract=0.0, min_px_count_visib=0)
     dataset = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
 else:
     dataset = DetectorCropDataset(
