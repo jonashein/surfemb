@@ -75,7 +75,7 @@ surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, ob
 
 if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets, min_visib_fract=0.0, min_px_count_visib=0)
     data = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
 else:
     data = detector_crops.DetectorCropDataset(

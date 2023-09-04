@@ -150,7 +150,7 @@ def main():
     logger.log_hyperparams(args)
 
     ckpt_filename = f"{args.dataset}-{run.id}-" + "{epoch}-{step}-{val_loss:.2f}"
-    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename=ckpt_filename, save_top_k=1, save_last=True)
+    model_ckpt_cb = pl.callbacks.ModelCheckpoint(dirpath='data/models/', filename=ckpt_filename, monitor="valid/loss", save_top_k=1, save_last=True)
     model_ckpt_cb.CHECKPOINT_NAME_LAST = f"{args.dataset}-{run.id}-last"
 
     trainer = pl.Trainer(
