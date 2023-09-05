@@ -70,7 +70,7 @@ if args.use_pose_score:
     name += '-pose-score'
 
 with open(
-        f'data/results/{name}_{args.dataset}-{config[args.dataset].test_folder}.csv'
+        f'data/results/{name}_{args.dataset}-{"-".join(config[args.dataset].test_folder.split("_"))}.csv'
         , 'w'
 ) as f:
     f.writelines(lines)
