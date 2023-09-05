@@ -35,6 +35,7 @@ model_path = Path(args.model_path)
 assert model_path.is_file()
 model_name = model_path.name.split('.')[0]
 dataset = model_name.split('-')[0]
+cfg = config[dataset]
 
 results_dir = Path('data/results')
 results_dir.mkdir(exist_ok=True)
@@ -71,7 +72,6 @@ if args.targets_path:
 
 # load data
 root = Path('data/bop') / dataset
-cfg = config[dataset]
 objs, obj_ids = load_objs(root / cfg.model_folder, args.objs)
 assert len(obj_ids) > 0
 surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, obj_ids)

@@ -40,6 +40,7 @@ model_path = Path(args.model_path)
 name = model_path.name.split('.')[0]
 dataset = name.split('-')[0]
 device = torch.device(args.device)
+cfg = config[dataset]
 
 if args.targets_path:
     targets_path = Path(args.targets_path)
@@ -59,7 +60,6 @@ if args.targets_path:
     if cfg.test_folder == "test_orx":
         cfg.img_ext = "jpg"
 
-cfg = config[dataset]
 crop_res = 224
 root = Path('data/bop') / dataset
 test_folder = root / cfg.test_folder
