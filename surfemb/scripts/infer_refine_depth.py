@@ -96,10 +96,10 @@ all_depth_timings = [[], []]
 for j in range(2):
     depth_timings = all_depth_timings[j]
     for i, d in enumerate(tqdm(BackgroundGenerator(dataset, max_prefetch=2), desc='running depth refinement', smoothing=0, total=len(dataset))):
-        if d['mask_samples'] is None:
+        if d is None or d['mask_samples'] is None:
             n_failed += 1
             depth_timings.append(0)
-            print(f"Failed to sample from mask. n_failed={n_failed}")
+            print(f"Failed to sample from mask for sample {i}. n_failed={n_failed}")
             continue
         pose = poses[j, i]  # (3, 4)
         R = pose[:3, :3]
@@ -185,9 +185,8 @@ for j in range(2):
             plt.tight_layout()
             plt.show()
 
-poses_depth_timings = poses_timings + np.array(all_depth_timings)
 print(f'{n_failed / (len(dataset) * 2):.3f} failed')
 
 if not args.debug:
     np.save(str(poses_depth_fp), poses_depth)
-    np.save(str(poses_depth_timings_fp), poses_depth_timings)
+    np.save(str(poses_depth_timings_fp), np.zeros(poses_depth.shape[:2]))

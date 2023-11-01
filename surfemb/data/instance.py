@@ -102,12 +102,12 @@ class BopInstanceDataset(torch.utils.data.Dataset):
         return len(self.instances)
 
     def __getitem__(self, i):
+        instance = self.instances[i].copy()
         try:
-            instance = self.instances[i].copy()
             for aux in self.auxs:
                 instance = aux(instance, self)
         except Exception as e:
-            print(f"Caught {type(e).__name__} during inference of sample {i}: \n{e}")
+            print(f"Caught {type(e).__name__} when loading sample {i}: \n{e}")
             instance = None
         return instance
 
