@@ -28,3 +28,6 @@ itodd.img_folder = 'gray'
 itodd.img_ext = 'tif'
 
 config['mvpsp'] = mvpsp = DatasetConfig()
+
+config['pbr_random_lighting'] = pbr_random_lighting = DatasetConfig()
+config['pbr_fixed_lighting'] = pbr_fixed_lighting = DatasetConfig()
