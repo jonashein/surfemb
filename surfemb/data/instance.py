@@ -22,6 +22,7 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             auxs: Sequence['BopInstanceAux'] = tuple(), show_progressbar=True,
     ):
         self.pbr, self.test, self.cfg = pbr, test, cfg
+        assert dataset_root.exists(), f"Invalid dataset directory: {dataset_root}"
         assert scene_ids is None or targets is None, "Can't have both yet."
         assert targets is None or test, "Targets can only be used for test split"
 
