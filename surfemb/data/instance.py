@@ -27,14 +27,16 @@ class BopInstanceDataset(torch.utils.data.Dataset):
         assert targets is None or test, "Targets can only be used for test split"
 
         if pbr:
-            assert not test
+            if test:
+                print("WARNING: You are using PBR data for testing!")
             self.data_folder = dataset_root / 'train_pbr'
             self.img_folder = 'rgb'
             self.depth_folder = 'depth'
             self.img_ext = 'jpg'
             self.depth_ext = 'png'
         elif synth and not pbr:
-            assert not test
+            if test:
+                print("WARNING: You are using synthetic data for testing!")
             self.data_folder = dataset_root / 'train_synth'
             self.img_folder = 'rgb'
             self.depth_folder = 'depth'
