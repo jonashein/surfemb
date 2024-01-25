@@ -37,6 +37,8 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
+        assert emb_dim % 3 == 0, "emb_dim must be divisible by 3"
+
         self.n_objs, self.emb_dim = n_objs, emb_dim
         self.n_pos, self.n_neg = n_pos, n_neg
         self.lr_cnn, self.lr_mlp = lr_cnn, lr_mlp
