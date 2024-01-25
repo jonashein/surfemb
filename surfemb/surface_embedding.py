@@ -24,7 +24,7 @@ mlp_class_dict = dict(
 
 
 class SurfaceEmbeddingModel(pl.LightningModule):
-    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr_cnn=1e-5, lr_mlp=1e-5,
+    def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr=1e-5,
                  cnn_name='resnet18',
                  mlp_name='siren', mlp_hidden_features=256, mlp_hidden_layers=2,
                  key_noise=1e-3, separate_decoders=True,
@@ -41,7 +41,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
         self.n_objs, self.emb_dim = n_objs, emb_dim
         self.n_pos, self.n_neg = n_pos, n_neg
-        self.lr_cnn, self.lr_mlp = lr_cnn, lr_mlp
+        self.lr = lr
         self.key_noise = key_noise
         self.separate_decoders = separate_decoders
 
@@ -65,6 +65,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         parser.add_argument('--mlp-hidden-features', type=int, default=256)
         parser.add_argument('--mlp-hidden-layers', type=int, default=2)
         parser.add_argument('--key-noise', type=float, default=1e-3)
+        parser.add_argument('--lr', type=float, default=1e-5)
         parser.add_argument('--single-decoder', dest='separate_decoders', action='store_false')
         return parent_parser
 
@@ -118,11 +119,11 @@ class SurfaceEmbeddingModel(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.Adam([
-            dict(params=self.cnn.parameters(), lr=self.lr_cnn),
-            dict(params=self.mlps.parameters(), lr=self.lr_mlp),
+            dict(params=self.cnn.parameters(), lr=self.lr),
+            dict(params=self.mlps.parameters(), lr=self.lr),
         ])
         warmup = dict(
-            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, base_lr=[self.lr_cnn, self.lr_mlp], max_lr=[10.0 * self.lr_cnn, 10.0 * self.lr_mlp], cycle_momentum=False),
+            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, base_lr=[self.lr, self.lr], max_lr=[10.0 * self.lr, 10.0 * self.lr], cycle_momentum=False),
             interval='step'
         )
         return [opt], [warmup]
