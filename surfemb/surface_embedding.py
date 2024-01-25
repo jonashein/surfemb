@@ -58,7 +58,7 @@ class SurfaceEmbeddingModel(pl.LightningModule):
     @staticmethod
     def model_specific_args(parent_parser: argparse.ArgumentParser):
         parser = parent_parser.add_argument_group(SurfaceEmbeddingModel.__name__)
-        parser.add_argument('--cnn_name', type=str, default="resnet18")
+        parser.add_argument('--cnn-name', type=str, default="resnet18")
         parser.add_argument('--emb-dim', type=int, default=12)
         parser.add_argument('--mlp-hidden-features', type=int, default=256)
         parser.add_argument('--mlp-hidden-layers', type=int, default=2)
