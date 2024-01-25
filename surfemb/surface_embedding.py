@@ -25,8 +25,9 @@ mlp_class_dict = dict(
 
 class SurfaceEmbeddingModel(pl.LightningModule):
     def __init__(self, n_objs: int, emb_dim=12, n_pos=1024, n_neg=1024, lr_cnn=1e-5, lr_mlp=1e-5,
+                 cnn_name='resnet18',
                  mlp_name='siren', mlp_hidden_features=256, mlp_hidden_layers=2,
-                 key_noise=1e-3, warmup_steps=2000, separate_decoders=True,
+                 key_noise=1e-3, separate_decoders=True,
                  **kwargs):
         """
         :param emb_dim: number of embedding dimensions
@@ -39,12 +40,12 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         self.n_objs, self.emb_dim = n_objs, emb_dim
         self.n_pos, self.n_neg = n_pos, n_neg
         self.lr_cnn, self.lr_mlp = lr_cnn, lr_mlp
-        self.warmup_steps = warmup_steps
         self.key_noise = key_noise
         self.separate_decoders = separate_decoders
 
         # query model
         self.cnn = ResNetUNet(
+            model_name=cnn_name,
             n_class=(emb_dim + 1) if separate_decoders else n_objs * (emb_dim + 1),
             n_decoders=n_objs if separate_decoders else 1,
         )
@@ -57,7 +58,11 @@ class SurfaceEmbeddingModel(pl.LightningModule):
     @staticmethod
     def model_specific_args(parent_parser: argparse.ArgumentParser):
         parser = parent_parser.add_argument_group(SurfaceEmbeddingModel.__name__)
+        parser.add_argument('--cnn_name', type=str, default="resnet18")
         parser.add_argument('--emb-dim', type=int, default=12)
+        parser.add_argument('--mlp-hidden-features', type=int, default=256)
+        parser.add_argument('--mlp-hidden-layers', type=int, default=2)
+        parser.add_argument('--key-noise', type=float, default=1e-3)
         parser.add_argument('--single-decoder', dest='separate_decoders', action='store_false')
         return parent_parser
 

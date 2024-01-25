@@ -15,11 +15,22 @@ def convrelu(in_channels, out_channels, kernel, padding):
 
 
 class ResNetUNet(nn.Module):
-    def __init__(self, n_class, feat_preultimate=64, n_decoders=1):
+    def __init__(self, n_class, model_name="resnet18", feat_preultimate=64, n_decoders=1):
         super().__init__()
 
+        assert model_name in ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"]
+
         #  shared encoder
-        self.base_model = torchvision.models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        if model_name == "resnet18":
+            self.base_model = torchvision.models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        elif model_name == "resnet34":
+            self.base_model = torchvision.models.resnet34(weights=ResNet34_Weights.IMAGENET1K_V1)
+        elif model_name == "resnet50":
+            self.base_model = torchvision.models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        elif model_name == "resnet101":
+            self.base_model = torchvision.models.resnet101(weights=ResNet101_Weights.IMAGENET1K_V1)
+        elif model_name == "resnet152":
+            self.base_model = torchvision.models.resnet152(weights=ResNet152_Weights.IMAGENET1K_V1)
         self.base_layers = list(self.base_model.children())
 
         self.layer0 = nn.Sequential(*self.base_layers[:3])  # size=(N, 64, x.H/2, x.W/2)
