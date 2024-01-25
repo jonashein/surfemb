@@ -4,7 +4,7 @@
 import torch
 from torch import nn
 import torchvision
-from torchvision.models import ResNet18_Weights
+from torchvision.models import ResNet18_Weights, ResNet34_Weights, ResNet50_Weights, ResNet101_Weights, ResNet152_Weights
 
 
 def convrelu(in_channels, out_channels, kernel, padding):
