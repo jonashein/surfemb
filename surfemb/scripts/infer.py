@@ -27,6 +27,7 @@ parser.add_argument('--max-poses', type=int, default=10000)
 parser.add_argument('--max-pose-evaluations', type=int, default=1000)
 parser.add_argument('--no-rotation-ensemble', dest='rotation_ensemble', action='store_false')
 parser.add_argument('--targets-path', type=str, default=None)
+parser.add_argument('--subset', type=str, default=None)
 args = parser.parse_args()
 
 res_crop = args.res_crop
@@ -35,7 +36,7 @@ model_path = Path(args.model_path)
 assert model_path.is_file()
 model_name = model_path.name.split('.')[0]
 dataset = model_name.split('-')[0]
-cfg = config[dataset]
+cfg = config[dataset if args.subset is None else f"{dataset}_{args.subset}"]
 
 results_dir = Path('data/results')
 results_dir.mkdir(exist_ok=True)
@@ -46,7 +47,7 @@ scene_ids_fp = results_dir / f'{dataset}-scene_ids.npy'
 img_ids_fp = results_dir / f'{dataset}-view_ids.npy'
 obj_ids_fp = results_dir / f'{dataset}-obj_ids.npy'
 for fp in poses_fp, poses_scores_fp, poses_timings_fp:
-    assert not fp.exists()
+    assert not fp.exists(), f"Must not overwrite {fp}. Please rename or remove first."
 
 # load model
 model = SurfaceEmbeddingModel.load_from_checkpoint(str(model_path)).eval().to(device)  # type: SurfaceEmbeddingModel
@@ -55,8 +56,10 @@ model.freeze()
 if args.targets_path:
     targets_path = Path(args.targets_path)
     assert targets_path.is_file()
+    print(f"Loading targets from {targets_path}")
     targets_raw = json.load(targets_path.open("r"))
     targets = {}
+    targets_count = 0
     for t in targets_raw:
         scene = int(t["scene_id"])
         im_id = int(t["im_id"])
@@ -66,9 +69,9 @@ if args.targets_path:
         if im_id not in targets[scene]:
             targets[scene][im_id] = []
         targets[scene][im_id].append(obj_id)
+        targets_count += 1
     cfg.test_folder = targets_path.parent.stem
-    if cfg.test_folder == "test_orx":
-        cfg.img_ext = "jpg"
+    print(f"Found {targets_count} test samples in {len(targets)} scenes.")
 
 # load data
 root = Path('data/bop') / dataset
@@ -78,15 +81,18 @@ surface_samples, surface_sample_normals = utils.load_surface_samples(dataset, ob
 
 if args.gt_crop:
     auxs = model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=False)
-    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, cfg=cfg, targets=targets, min_visib_fract=0.0, min_px_count_visib=0)
-    data = instance.BopInstanceDataset(**dataset_args, synth=False, pbr=False, test=True)
+    dataset_args = dict(dataset_root=root, obj_ids=obj_ids, auxs=auxs, configs=cfg, targets=targets, min_visib_fract=0.0, min_px_count_visib=0)
+    data = instance.BopInstanceDataset(**dataset_args, test=True)
+    assert len(data) > 0, f"Loaded empty BopInstanceDataset"
 else:
     data = detector_crops.DetectorCropDataset(
         dataset_root=root, cfg=cfg, obj_ids=obj_ids,
         detection_folder=Path(f'data/detection_results/{dataset}'),
         auxs=model.get_infer_auxs(objs=objs, crop_res=res_crop, from_detections=True)
     )
+    assert len(data) > 0, f"Loaded empty DetectorCropDataset"
 
+print(f"Loaded {len(data)} test samples")
 renderer = ObjCoordRenderer(objs, w=res_crop, h=res_crop)
 
 # infer

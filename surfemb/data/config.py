@@ -28,8 +28,14 @@ itodd.img_folder = 'gray'
 itodd.img_ext = 'tif'
 
 config['mvpsp'] = mvpsp = DatasetConfig()
-
-config['pbr_random_lighting'] = pbr_random_lighting = DatasetConfig()
-pbr_random_lighting.img_ext = 'jpg'
-config['pbr_fixed_lighting'] = pbr_fixed_lighting = DatasetConfig()
-pbr_fixed_lighting.img_ext = 'jpg'
+config['mvpsp_orx'] = mvpsp_orx = DatasetConfig()
+mvpsp_orx.test_folder = 'test_orx'
+mvpsp_orx.img_ext = 'jpg'
+config['mvpsp_pbr_random_lighting'] = mvpsp_pbr_random_lighting = DatasetConfig()
+mvpsp_pbr_random_lighting.train_folder = 'train_pbr_random_lighting'
+mvpsp_pbr_random_lighting.test_folder = 'test_pbr_random_lighting'
+mvpsp_pbr_random_lighting.img_ext = 'jpg'
+config['mvpsp_pbr_fixed_lighting'] = mvpsp_pbr_fixed_lighting = DatasetConfig()
+mvpsp_pbr_fixed_lighting.train_folder = 'train_pbr_fixed_lighting'
+mvpsp_pbr_fixed_lighting.test_folder = 'test_pbr_fixed_lighting'
+mvpsp_pbr_fixed_lighting.img_ext = 'jpg'
