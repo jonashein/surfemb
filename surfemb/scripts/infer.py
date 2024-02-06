@@ -36,16 +36,17 @@ model_path = Path(args.model_path)
 assert model_path.is_file()
 model_name = model_path.name.split('.')[0]
 dataset = model_name.split('-')[0]
-cfg = config[dataset if args.subset is None else f"{dataset}_{args.subset}"]
+dataset_subset = dataset if args.subset is None else f"{dataset}_{args.subset}"
+cfg = config[dataset_subset]
 
 results_dir = Path('data/results')
 results_dir.mkdir(exist_ok=True)
-poses_fp = results_dir / f'{model_name}-poses.npy'
-poses_scores_fp = results_dir / f'{model_name}-poses-scores.npy'
-poses_timings_fp = results_dir / f'{model_name}-poses-timings.npy'
-scene_ids_fp = results_dir / f'{dataset}-scene_ids.npy'
-img_ids_fp = results_dir / f'{dataset}-view_ids.npy'
-obj_ids_fp = results_dir / f'{dataset}-obj_ids.npy'
+poses_fp = results_dir / f'{dataset_subset}-{model_name}-poses.npy'
+poses_scores_fp = results_dir / f'{dataset_subset}-{model_name}-poses-scores.npy'
+poses_timings_fp = results_dir / f'{dataset_subset}-{model_name}-poses-timings.npy'
+scene_ids_fp = results_dir / f'{dataset_subset}-scene_ids.npy'
+img_ids_fp = results_dir / f'{dataset_subset}-view_ids.npy'
+obj_ids_fp = results_dir / f'{dataset_subset}-obj_ids.npy'
 for fp in poses_fp, poses_scores_fp, poses_timings_fp:
     assert not fp.exists(), f"Must not overwrite {fp}. Please rename or remove first."
 

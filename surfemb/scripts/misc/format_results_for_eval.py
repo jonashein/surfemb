@@ -22,6 +22,7 @@ else:
     assert targets_path.is_file()
     detection_path = Path('data/detection_results') / args.dataset / f"{targets_path.stem}"
 
+print("Loading detection results from", detection_path)
 assert(detection_path.exists())
 poses_fp = Path(args.poses)
 
