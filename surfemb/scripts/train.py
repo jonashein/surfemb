@@ -3,6 +3,7 @@ import argparse
 
 import torch.utils.data
 import pytorch_lightning as pl
+from pytorch_lightning.tuner import Tuner
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 import random
@@ -100,18 +101,18 @@ def main():
 
     n_subsets = len(data_subsets)
     n_valid = args.n_valid
-    if args.n_valid < 1.0:
-        n_valid_per_subset = np.ceil(n_valid / n_subsets)
+    if args.n_valid > 1.0:
+        n_valid_per_subset = np.ceil(n_valid / n_subsets).astype(int)
     train_subsets = []
     val_data = utils.EmptyDataset()
 
     # Train-validation split
     for idx, (subset_id, subset) in enumerate(data_subsets.items()):
         # split validation data
-        if args.n_valid < 1.0:
+        if args.n_valid > 1.0:
             n_valid_subset = n_valid_per_subset
         else:
-            n_valid_subset = np.ceil(len(subset) * args.n_valid)
+            n_valid_subset = np.ceil(len(subset) * args.n_valid).astype(int)
         train_subset, val_subset = torch.utils.data.random_split(
             subset, (len(subset) - n_valid_subset, n_valid_subset),
             generator=torch.Generator().manual_seed(0),
@@ -172,13 +173,12 @@ def main():
             model_ckpt_cb,
         ],
         val_check_interval=min(1., n_valid / (len(train_data) + len(val_data)) * 50),  # spend ~1/50th of the time on validation
-        auto_lr_find=args.lr_range_test
     )
 
     if args.lr_range_test:
         print("LR Range Test:")
-        #trainer.tune(model, loader_train, loader_valid)
-        lr_finder = trainer.tuner.lr_find(model, loader_train, loader_valid, num_training=1000)
+        tuner = Tuner(trainer)
+        lr_finder = tuner.lr_find(model, loader_train, loader_valid, num_training=1000)
         fig = lr_finder.plot(suggest=True)
         fig.savefig(f'data/logs/{args.dataset}-{run.id}-lr-range-test.png')
         model.lr = lr_finder.suggestion()
