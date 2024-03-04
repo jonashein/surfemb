@@ -3,7 +3,7 @@ import argparse
 
 import torch.utils.data
 import pytorch_lightning as pl
-from pytorch_lightning.tuner import Tuner
+from pytorch_lightning.tuner.tuning import Tuner
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 import random
