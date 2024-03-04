@@ -61,12 +61,12 @@ def main():
 
     # load configurations for all subsets, or use default one
     if args.subsets is None:
-        cfgs = {'default': config[args.dataset]}
+        cfgs = {args.dataset: config[args.dataset]}
     else:
         cfgs = {}
         for subset in args.subsets:
-            subset_id = subset if subset != "default" else args.dataset
-            assert subset_id in config, f"Unknown subset for {args.dataset}: {subset_id}"
+            subset_id = f"{args.dataset}_{subset}" if subset != "default" else args.dataset
+            assert subset_id in config, f"Unknown subset for {args.dataset}: {subset}"
             assert subset_id not in cfgs, f"Duplicate subset: {subset_id}"
             cfgs[subset_id] = config[subset_id]
 
