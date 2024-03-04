@@ -1,6 +1,8 @@
+import random
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterable
 
 import cv2
 import torch
@@ -30,16 +32,25 @@ def add_timing_to_list(l):
         l.append(time.time() - start)
 
 
-def balanced_dataset_concat(a, b):
-    # makes an approximately 50/50 concat
-    # by adding copies of the smallest dataset
-    if len(a) < len(b):
-        a, b = b, a
-    assert len(a) >= len(b)
-    data = a
-    for i in range(round(len(a) / len(b))):
-        data += b
-    return data
+def balanced_dataset_concat(datasets):
+    # Creates a balanced concatenation of all datasets by adding copies of the smaller datasets.
+    # The resulting will have size len(datasets) * max_length
+    assert len(datasets) > 0
+
+    lengths = [len(d) for d in datasets]
+    max_length = max(lengths)
+
+    balanced = EmptyDataset()
+    for i, d in enumerate(datasets):
+        n_copies = max_length // lengths[i]
+        n_subsample = max_length - n_copies * lengths[i]
+        for _ in range(n_copies):
+            balanced += d
+        if n_subsample > 0:
+            random.shuffle(d.indices)
+            balanced += torch.utils.data.Subset(d, d.indices[:n_subsample])
+
+    return balanced
 
 
 def load_surface_samples(dataset, obj_ids, root=Path('data')):

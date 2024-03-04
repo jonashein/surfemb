@@ -39,3 +39,7 @@ config['mvpsp_pbr_fixed_lighting'] = mvpsp_pbr_fixed_lighting = DatasetConfig()
 mvpsp_pbr_fixed_lighting.train_folder = 'train_pbr_fixed_lighting'
 mvpsp_pbr_fixed_lighting.test_folder = 'test_pbr_fixed_lighting'
 mvpsp_pbr_fixed_lighting.img_ext = 'jpg'
+config['mvpsp_pbr_random_texture'] = mvpsp_pbr_random_texture = DatasetConfig()
+mvpsp_pbr_random_texture.train_folder = 'train_pbr_random_texture'
+mvpsp_pbr_random_texture.test_folder = 'test_pbr_random_texture'
+mvpsp_pbr_random_texture.img_ext = 'jpg'
