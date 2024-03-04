@@ -65,6 +65,8 @@ def main():
     else:
         cfgs = {}
         for subset in args.subsets:
+            if "test" in subset.lower():
+                print(f"WARNING: POTENTIAL TEST SUBSET IN TRAINING DATA! {subset}")
             subset_id = subset if subset != "default" else args.dataset
             assert subset_id in config, f"Unknown subset for {args.dataset}: {subset_id}"
             assert subset_id not in cfgs, f"Duplicate subset: {subset_id}"
