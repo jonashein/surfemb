@@ -76,7 +76,7 @@ def main():
             assert 0.0 < fraction <= 1.0, f"Invalid subset fraction: {fraction}"
 
     # load objs
-    objs, obj_ids = obj.load_objs(root / cfgs[0].model_folder, args.objs)
+    objs, obj_ids = obj.load_objs(root / list(cfgs.values())[0].model_folder, args.objs)
     assert len(obj_ids) > 0
 
     # model
