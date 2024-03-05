@@ -19,6 +19,7 @@ class RgbLoader(BopInstanceAux):
         inst['rgb'] = rgb.copy() if self.copy else rgb
         return inst
 
+
 class DepthLoader(BopInstanceAux):
     def __init__(self, copy=False):
         self.copy = copy
@@ -30,6 +31,7 @@ class DepthLoader(BopInstanceAux):
         assert depth is not None
         inst['depth'] = depth.copy() if self.copy else depth
         return inst
+
 
 class MaskLoader(BopInstanceAux):
     def __init__(self, mask_type='mask_visib'):

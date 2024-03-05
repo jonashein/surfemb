@@ -31,7 +31,6 @@ def add_timing_to_list(l):
     finally:
         l.append(time.time() - start)
 
-
 def balanced_dataset_concat(datasets):
     # Creates a balanced concatenation of all datasets by adding copies of the smaller datasets.
     # The resulting will have size len(datasets) * max_length

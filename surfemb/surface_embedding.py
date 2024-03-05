@@ -122,8 +122,13 @@ class SurfaceEmbeddingModel(pl.LightningModule):
             dict(params=self.cnn.parameters(), lr=self.lr),
             dict(params=self.mlps.parameters(), lr=self.lr),
         ])
+        lr_scheduler = torch.optim.lr_scheduler.CyclicLR(opt, base_lr=[self.lr, self.lr], max_lr=[10.0 * self.lr, 10.0 * self.lr], cycle_momentum=False)
+        # workaround for https://github.com/pytorch/pytorch/issues/88684
+        lr_scheduler._scale_fn_custom = lr_scheduler._scale_fn_ref()
+        lr_scheduler._scale_fn_ref = None
+
         warmup = dict(
-            scheduler=torch.optim.lr_scheduler.CyclicLR(opt, base_lr=[self.lr, self.lr], max_lr=[10.0 * self.lr, 10.0 * self.lr], cycle_momentum=False),
+            scheduler=lr_scheduler,
             interval='step'
         )
         return [opt], [warmup]
