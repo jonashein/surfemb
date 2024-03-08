@@ -14,8 +14,10 @@ class RgbLoader(BopInstanceAux):
     def __call__(self, inst: dict, dataset: BopInstanceDataset) -> dict:
         fp = inst['rgb_path']
         assert fp.exists(), f"FileNotFound: {fp}"
-        rgb = cv2.imread(str(fp), cv2.IMREAD_COLOR)[..., ::-1]
-        assert rgb is not None
+        rgb = cv2.imread(str(fp), cv2.IMREAD_COLOR)
+        assert rgb is not None, f"Error reading image at {fp}"
+        # BGR to RGB
+        rgb = rgb[..., ::-1]
         inst['rgb'] = rgb.copy() if self.copy else rgb
         return inst
 

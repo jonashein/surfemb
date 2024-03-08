@@ -97,7 +97,7 @@ class BopInstanceDataset(torch.utils.data.Dataset):
             for aux in self.auxs:
                 instance = aux(instance, self)
         except Exception as e:
-            print(f"Caught {type(e).__name__} when loading sample {i}: \n{e}")
+            print(f"Caught {type(e).__name__} in aux funtion {type(aux)} when loading sample {i}: \n{e}")
             instance = None
         return instance
 
