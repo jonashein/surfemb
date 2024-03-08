@@ -210,15 +210,19 @@ class SurfaceEmbeddingModel(pl.LightningModule):
         coord_img = batch['obj_coord'][i]
         coord_mask = coord_img[..., 3] != 0
 
-        mask_lgts, query_img = self.infer_cnn(img, obj_idx)
-        query_img = self.get_emb_vis(query_img)
+        mask_lgts, query_img = self.infer_cnn(img, obj_idx)  # (h, w), (h, w, emb_dim)
+        query_img_vis = self.get_emb_vis(query_img)
         mask_est = torch.tile(torch.sigmoid(mask_lgts)[..., None], (1, 1, 3))
 
-        key_img = self.infer_mlp(coord_img[..., :3], obj_idx)
-        key_img = self.get_emb_vis(key_img, mask=coord_mask, demean=True)
+        key_img = self.infer_mlp(coord_img[..., :3], obj_idx)  # (h, w, emb_dim)
+        key_img_vis = self.get_emb_vis(key_img, mask=coord_mask, demean=True)
+
+        # compute cosine similarity between query_img and key_img
+        sim_img = F.cosine_similarity(query_img, key_img, dim=-1)
+        sim_img_vis = self.get_emb_vis(sim_img, mask=coord_mask, demean=True)
 
         log_img = torch.cat((
-            denormalize(img).permute(1, 2, 0), mask_est, query_img, key_img,
+            denormalize(img).permute(1, 2, 0), mask_est, query_img_vis, key_img_vis, sim_img_vis,
         ), dim=1).cpu().numpy()
         self.trainer.logger.experiment.log(dict(
             embeddings=wandb.Image(log_img),
